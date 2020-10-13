@@ -1,6 +1,8 @@
 >抱佛脚一时爽，一直抱佛脚一直爽！这篇文章总结常见的c++面试问题~因为是抱佛脚，所以结构上没有什么逻辑...
 >
 >参考链接：[Waking-Up](https://github.com/wolverinn/Waking-Up) [CycNotes](https://github.com/CyC2018/CS-Notes) [牛客网](https://www.nowcoder.com/)
+[TOC]
+
 # 面向对象的三大特点
 
 封装、继承、多态
@@ -566,7 +568,7 @@ const变量默认是local to the file的，所以如果要多个文件共享一�
 
 - 区别
 
-  ![](.\pics\重写重载覆盖.JPG)
+  ![](./pics/重写重载覆盖.JPG)
 
 - 当参数列表不同时，无论基类中的函数是否被virtual修饰，基类函数都是被隐藏，而不是被重写；参数相同时，若基类函数没有关键字virtual，此时基类函数被隐藏，若有则被重写
 
@@ -632,9 +634,9 @@ this 并不是一个常规变量，而是个右值，所以不能取得 this 的
 
 ### 栗子（[博客园](https://www.cnblogs.com/zrtqsk/p/4371773.html)）
 
-![](.\pics\内存对齐1.JPG)
+![](./pics/内存对齐1.JPG)
 
-![](.\pics\内存对齐2.JPG)
+![](./pics/内存对齐2.JPG)
 
 # go实现的并发模型
 
