@@ -1,0 +1,413 @@
+十 框架
+1.spring
+(1).ssh&ssm
+ssh＝struct2+spring+hibernate
+ssm＝spring mvc+spring+mybatis
+
+(2).spring的优点
+- 免费且开源的框架（或者说容器）
+- 轻量级
+- 非入侵式：把它引入项目后不会对原来的代码产生影响，原来的仍然可以用
+- 控制反转 ioc
+- 面向切片编程 aop
+- 支持事务的处理
+- 可以把所有java框架整合进去（大杂烩）
+
+(3).spring的七大模块
+- core
+- aop
+- orm 
+对象关系映射
+- dao
+- web
+- context
+- web mvc
+
+(4).
+- spring boot
+快速开发脚手架，只需简单配置即可
+基于它可以快速开发单个微服务（比如对数据库的操作）
+约定大于配置
+是构建任何spring项目的起点
+- spring cloud
+基于spring boot实现
+微服务的整合协调
+
+(5).ioc理论推导
+(5.1) 原来的开发方式
+控制层调用业务层，业务层调用dao层
+- 控制层：
+public class MyTest {
+  public static void main(String[] args) {
+    UserService userService ＝ new UserServiceImpl();
+    userService.getUser();
+  }
+}
+- 业务层：
+接口
+package xxx.service;
+public interface UserService {
+  void getUser();
+}
+实现
+package xxx.service;
+import xxx.UserDao;
+import xxx.UserDaoImpl;
+public class UserServiceImpl implements UserService {
+  private UserDao userDao ＝ new UserDaoImpl();或者 UserDaoMysqlImpl();
+  public void getUser() {
+    userDao.getUser();
+  }
+}
+- dao层
+接口
+package xxx.dao;
+public interface UserDao {
+  void getUser();
+}
+实现1
+package xxx.dao;
+public class UserDaoImpl implements UserDao {
+  void getUser() {  System.out.printIn(“获取用户数据”);  }
+}
+实现2
+package xxx.dao;
+public class UserDaoMysqlImpl implements UserDao {
+  void getUser() {  System.out.printIn(“mysql获取用户数据”);  }
+}
+
+*注意：每增加一个需求，需要增加dao的方法并改变业务层的代码
+*缺点：客户的需求一改变就需要改业务层原有的代码
+
+(5.2) 改进： 用set实现动态注入；是ioc的原型
+- 用户层加一句
+userService.setUserdao(new UserDaoMysqlImpl)
+- 业务层不再new，而是用set
+public void setUserDao(Userdao userdao) {
+  this.userdao ＝ userdao;
+}
+*这样增加需求后业务层的代码就无需更改了
+*原来主动性在程序上，主动new对象；现在主动性不在程序上，被动set对象
+*程序员不用管理对象的创建
+*系统耦合性降低，可以专注在业务实现上
+*spring的底层都是这样使用set实现控制反转的
+
+(5.3) ioc的本质
+ioc是一种设计思想，DI（依赖注入）是其实现方式
+控制反转前，对象的创建由程序控制，控制反转后，对象的创建由第三方控制
+
+(5.4) spring中的ioc
+- 实现方式：xml配置/注解/零配置
+- spring ioc容器：初始化时先读取配置文件，再根据配置文件或元数据创建和组织对象放入容器中，需要用时再从容器中取出来；spring容器中的对象称为Bean
+- 用xml配置Bean时，Bean的定义和实现是分开的，而用注解的方式可以将二者合为一体（即把Bean的定义信息直接以注解的形式定义到实现类中，从而实现零配置）
+- ioc的定义：通过描述（xml或注解）、第三方生产或获取特定对象，在spring中通过ioc容器实现，具体实现方法是依赖注入；类由Spring根据配置来进行实例化，实例化的具体方法是set，也就是说对象不是程序本身创建的
+- 控制的含义：控制对象的创建
+- 反转的含义：程序本身不创建对象而是被动地接收对象
+- 依赖注入：通过set实现
+
+(6).spring实例：HelloSpring
+- 写好类的定义（必须有set和get）
+- 写好配置文件：以xml为例，import类的定义，在xml中写好对象（包括它属于哪个类，它的name是什么，它的值是多少）
+	下面这段等价于类的实例化：
+	<bean id="hello" class="Hello"> // id等价于对象名，class等价于类（注意要写全路径）
+		<property name="str" value="Spring"/> // property等价于给对象中名为name的变量设为值value
+	</bean>
+	<bean id="helloFather" class="HelloFather">
+		<property name="myHello" ref="hello"/> // ref是通过id引用Spring容器中已经创建好的对象
+	</bean>
+- 在控制层MyTest new一个spring的context对象（实际上就是加载配置文件，拿到Spring容器）
+	new ApplicationContext context = new ClassPathXmlApplicationContext(配置文件名);
+- 要对象时，从context里取即可：hello是Spring创建的
+	Hello hello = (Hello) context.getBean("hello"); //注意这里的"hello"是指配置中对象的id
+	System.out.printIn(hello.toString()); //输出Hello{str='Spring'}
+
+(7).ioc创建对象的方式
+- 默认使用无参构造创建对象，若要使用有参构造，可以改配置为：
+①通过下标（index）
+<bean id="user" class="com.kuang.pojo.User">
+	<constructor-arg index="0" value="java"> // 把user中的第一个成员变量值设置为java
+</bean>
+②通过参数类型
+<bean id="user" class="com.kuang.pojo.User">
+	<constructor-arg type="java.lang.String" value="java"> // 把user中类型为String的成员变量值设置为java，要求User中只有一个类型为String的成员变量
+</bean>
+③通过参数名
+<bean id="user" class="com.kuang.pojo.User">
+	<constructor-arg name="name" value="java">
+</bean>
+- 无论是否调用了getBean()，配置中的对象都会被创建（即会调用对象的构造器），或者说：加载完配置之后就通过构造器完成了实例化
+
+(8).Spring xml怎么配？
+①别名 alias
+<alias name="user" alias="xxxxxx"/> // id为user的对象现在有了两个id：user和xxxxxx，通过任意一个都可以取出它
+②Bean的配置
+id：bean的唯一标识符，相当于对象名
+class：bean对象所对应的类型，相当于类名（全限定名）
+name：即别名，且可以同时取多个别名（用逗号、空格、分号分割）
+<bean id="user" name="xxxxxx, xxx" class="User"
+scope：默认是单例模式
+③import
+一般用于团队开发，可以将多个配置文件导入合并为一个
+<import resource="a.xml"/>
+<import resource="b.xml"/>
+多个配置中配的相同的Bean会被合为一个
+
+(9)依赖注入 DI
+①构造器注入：见(7)的第一点
+②set注入
+a. 依赖：bean对象的创建依赖于Spring容器
+b. 注入：bean对象的所有属性，由Spring容器来注入
+<bean id="hello" class="Hello"> 
+	<property name="name" value="Irene"/> // 普通值注入
+	<property name="address" ref="address"/> // 对象注入（即Bean注入，address是一个定义好的Bean）
+	<property name="books"> // 数组注入，List/Set注入把array改为list/set即可
+		<array>
+			<value>红楼梦</value>
+			<value>水浒传</value>
+		</array>
+	</property>
+	<property name="card"> // map注入
+		<map>
+			<entry key="身份证" value="xxx"/>
+			<entry key="银行卡" value="ccc"/>
+		</map>
+	</property>
+	<property name="wife"> // null注入
+		<null/>
+	</property>
+</bean>
+*注意还有p命名空间和c命名空间注入
+③其他方式注入
+
+(10)Bean的作用域
+①单例模式 Singleton：默认作用域
+<bean ... scope="Singleton">
+每个Spring ioc容器中一个id对应同一个对象
+从一个ioc容器中通过相同的id get的Bean是同一个对象
+从不同ioc容器中...不是同一个对象
+②原型模式 Prototype：一般用于多线程
+<bean ... scope="Prototype">
+从一个ioc容器中通过相同的id get的Bean是不同的对象（每次getBean会新建一个对象）
+③request、session、application
+只能在web开发中使用
+request：在请求中创建，创建完对象即失效；一次http请求中id相同的Bean都是同一个Bean，不同的请求创建不同的Bean
+session：会一直在session中活着；一个session中id相同的Bean都是同一个Bean，不同的session创建不同的Bean
+application：全局唯一；每个应用程序可以有多个ioc容器，全局唯一意味着不同ioc容器中相同的id也对应同一个对象
+
+(11)Bean的自动装配
+注意：
+getBean可以用类型强制转换，也可以getBean(“people”, People.class);
+xml显式配置和使用注解自动配置都使用了反射机制，前者通过反射获得了set方法，后者通过反射获得直接对成员变量赋值
+标注了@nullable的字段可以为null
+
+[xml显式配置]
+①定义：Spring会在上下文中自动寻找并给对象配置属性，无需手动写入配置
+②背景：Spring中有三种装配方式：在xml中显式配置；在java中显式配置；隐式自动装配
+③自动装配的方法
+- byName自动装配
+<bean ... autowire＝“byName”>
+会自动在容器上下文中查找当前对象有的set方法后面的名字对应的Bean id（不区分大小写），进行装配
+前提：上下文中与各set方法名相同的id都只有一个
+- byType自动装配
+<bean ... autowire＝“byType”>
+会自动在容器上下文中查找当前对象可以set的属性类型对应的Bean，进行装配
+前提：上下文中各属性类型的Bean都只有一个
+注意：此时属性类型的Bean的配置中可以省略id
+
+[使用注解实现自动装配]
+①用注解比用xml好
+②使用注解的前提：
+在xml最开始导入约束
+<bean xmlns:context＝“http ... context”等>
+在xml加入一句对注解的支持
+<context annotation-config/>
+③方法
+a. 在类的定义中对应的成员变量前面一行或者对应的set方法前一行加入@Autowired，然后spring会先检查是否符合byType的条件，符合就用它，否则可以在@Autowired下加一行@Qualifier(value＝“someBeanId”)指定使用byName
+【使用Autowired注入的对象必须在上下文中存在！】
+【在成员变量前一行加入注解后，可以不用在类的定义内写对应的set方法了，因为注解是通过反射实现的】
+【如果显式地定义了Autowired的required＝false，则该字段可以为null，否则不可以】
+b. @Resource（是jdk原生注解，不导入Spring也可以用）
+和@Autowired类似，但顺序不同：先试byName，再试byType
+
+(12)Spring注解开发
+注意：
+一般只会把很少的东西放到配置里面，对每个Bean的配置是通过注解注入的
+Spring4之后，要使用注解开发，必须在xml中：导入context约束，增加注解支持，导入aop包
+在xml中通过scan指定要扫描的包，这个包下的注解就会生效（有了scan就可以不增加注解支持了）
+①bean的注入
+在类的定义文件中，在类名的上面加上@Component（表示该类已交付给Spring托管，是Spring的一个组件了），则Spring就会扫描到它，并自动装配一个该类的对象，相当于在xml配置里写了<bean ... />，其id默认是类名的小写
+②属性的注入（即成员变量值的注入）
+法一：在类的定义文件中，在成员变量的定义语句上面加上@Value(要设置的值)
+【允许没有对应的set方法】
+法二：在类的定义文件中，在成员变量对应的set方法上面加上@Value(要设置的值)
+③@Component衍生的几个注解
+@Repository：用于dao层，和@Component的作用相同
+@Service：用于业务层，...
+@Controller：用于控制层，...
+④用于自动装配的注解
+@Autowired
+@Resource
+@nullable
+⑤注入bean的作用域
+在类的定义文件中，在类名上面加上@Scope(“singleton”)
+⑥xml与注解
+xml：万能，适用于任何场合；维护简单方便
+注解：只能对当前类的对象进行注入，无法引用其他类；维护相对复杂
+xml用来管理Bean（即实现Bean的注入），注解只负责完成属性的注入
+
+(13)用javaconfig替代xml配置，实现零配置注入
+注意：
+Spring4之后，更推荐用javaconfig
+springboot中通常使用javaconfig
+javaconfig有两种把对象注入到spring中的方法：①在XiuConfig中写被@Bean注解的getUser方法return new User()；②在XiuConfig中写@ComponentScan(要扫描的包名，User类在该包中)，在User类的定义上加@Component
+其他注入对象的方式：①直接配xml；②xml中写bean和+注解之@Autowired(+Qualifier)/Resource；③xml中写bean autowired＝...；④xml中写scan+注解之@Component/Value/Scope
+
+①注入配置类
+在普通的java类（假设类名为XiuConfig）定义的上面加上@Configuration，即可使该类变为Spring的javaconfig，Spring会把它加载为一个Bean【Configuration本质上就是Component，表示这个类已经注册到了spring容器中，但它是配置类，和原来的xml文件等价】
+②加入扫描功能
+在XiuConfig的定义上面加上@ComponentScan(要扫描的包名)【和原来xml文件中的scan那句话等价】
+③注入第三方类及其属性的值
+在javaconfig的返回new的对象的方法（比如getUser() return new User();）上加上@Bean【表示这个方法已经注册到了spring容器中，就相当于之前在xml中写的一个bean标签，方法的名字相当于bean id，方法的返回类型相当于bean class，方法返回的对象也会注入到spring容器中】
+在User的类定义的上面加入@Component【表示这个类已经注册到了spring容器中】【这一步可加可不加，只要有第一步的@Bean就行】
+在User的setName方法上加入@Value(“xiuxiu”)【表示给属性注入值】
+④Spring加载配置类（相当于原来的加载上下文）
+ApplicationContext context＝new AnnotationConfigApplicationContext(XiuConfig.class)
+⑤Spring获得Bean（方法也可以是Bean！）
+User getUser＝(User) context.getBean(“getUser”)
+print getUser().getName()
+⑥把一个javaconfig导入到另一个javaconfig中
+在XiuConfig的定义上加上@Import(XiuConfig1.class)【等价于原来xml文件中的import】
+
+(14)springboot
+注意：
+springboot默认就是一个maven项目
+springboot项目建立好时会有一个启动类，其上有@SpringBootApplication注解，这个注解的祖先其实就是@Configuration，也就是一个javaconfig
+
+(15)(1)代理模式
+①注意：是spring aop的底层
+②含义
+类似于中介，用户无法直接联系房东
+中介和房东都是要干租房这件事
+③分类
+a. 静态代理
+抽象角色（租房）：一般使用接口/抽象类实现；真实角色和代理角色都要实现该接口
+真实角色（房东）：被代理的角色
+代理角色（中介）：类中以真实角色为私有成员；一般会有一些附属操作（房东只是租房，中介会在调用租房的基础上自己加入收中介费 看房等操作）
+客户：访问代理角色的
+*优点：解耦，公共业务交给代理角色，实现业务分工；公共业务发生扩展时方便集中管理；要加功能时可以不用改原有的业务代码
+*缺点：有一个真实角色就要写一个代理角色，代码翻倍
+*使用场景：想要给业务扩展公共功能时
+*更好的例子是“静态代理再理解”那一p的crud
+
+b. 动态代理
+*动态代理的代理角色是动态生成的，不是直接写的
+*动态代理的本质是通过反射得到要代理的接口
+*分类
+- 基于接口的动态代理：jdk的动态代理【spring使用】，动态代理代理的真实对象是接口
+- 基于类的动态代理：cglib
+- 基于java字节码：javassis
+*定义ProxyInvocationHandler类，它实现
+InvocationHandler（调用处理）接口（有invoke等函数），用于动态生成代理
+*PIH类的定义【下面的Object应该写成UserService更合适？】
+// 真实角色被代理的接口
+private Object target;
+void setTarget(Object target) this.target＝target;
+// 生成并获得代理类
+Object getProxy() 
+return Proxy.newProxyInstance(this.getClass.getClassLoader, target.getClass().getInterface(), this)
+// invoke函数，用于调用真实角色的方法并返回结果
+Object invoke(Object proxy, Method method, Object[] args) {
+// 可以加入一些附属操作
+log(method.getName());
+return result＝method.invoke(target, args);
+}
+*Client类的定义
+// 真实角色
+UserServiceImpl userService＝new UserServiceImpl();
+// 代理处理器
+PIH pih＝new PIH();
+// 把要代理的接口传入代理处理器
+pih.setTarget(userService);
+// 获得代理处理器动态生成的代理
+Target proxy＝pih.getProxy();
+// 代理调用真实角色方法
+proxy.rent();
+*优点
+静态代理的优点+
+一个动态代理类对应一个接口（UserService），可以代理多个实现了同一个接口的类（UserServiceImpl1，UserServiceImpl2...）
+
+(16)aop
+①定义
+面向切面编程，通过预编译和运行期间动态代理来实现对程序功能的统一维护
+切面：要横插进去的一个类
+通知：切面中的方法，包括前置、后置（可以拿到返回值）、环绕（前+后）、异常抛出、引介（在原类中新增一个属性）
+②作用
+对业务逻辑的各个部分进行隔离，降低耦合性
+*aop在spring中的作用：提供声明式事务，允许用户自定义切面，在不改变原代码的同时新增功能
+③使用spring实现aop
+a. 导入织入包
+法一：使用spring的接口
+step 1: 定义切面（以前置通知为例）
+class Log implements MethodBeforeAdvice {
+  void before(Method method, Object[] args, Object o) { // method是真实对象的方法，o是真实对象
+     print o.getClass.getName+“的”+method.getName+“被执行了”
+  }
+}
+step 2: 在xml中导入aop的约束
+step 3: 在xml中把Log和UserService注册为bean
+step 4: 在xml中配置aop
+<aop:config>
+	<aop:pointcut id="pointcut" expression="execution(* UserServiceImpl.*(..))"/> // 定义切入点
+	<aop:advisor advice-ref="log" pointcut-ref="pointcut"/> // 在切入点切入切面
+</aop:config>
+step 5: 在MyTest中
+获取spring context
+context.getBean("userService") // 注意动态代理的是接口，所以getBean是要get接口而不是接口的实现
+userService.rent()
+法二：使用自定义类
+step 1: 定义切面的类
+class DiyPointCut {
+	void mybefore() print "方法执行前"
+}
+step 2: 在xml中导入aop的约束
+step 3: 在xml中把DiyPointCut和UserService注册为bean 
+<bean id="diy" class="DiyPointCut"/>
+step 4: 在xml中配置aop
+<aop:config>
+	<aop:aspect ref="diy"> // 定义切面
+		<aop:pointcut id="pointcut" expression="execution(* UserServiceImpl.*(..))"/> // 定义切入点
+		<aop:before method="mybefore" pointcut-ref="pointcut"/> // 在切入点切入切面
+	</aop:aspect>
+</aop:config>
+step 5: 在MyTest中
+获取spring context
+context.getBean("userService") // 注意动态代理的是接口，所以getBean是要get接口而不是接口的实现
+userService.rent()
+法三：使用注解
+step 1: 定义切面的类并加入注解
+@Aspect // 标注这个类是一个切面
+class DiyPointCut {
+	@Before("execution(* UserServiceImpl.*(..))")
+	void mybefore() print "方法执行前"
+}
+step 2: 在xml中导入aop的约束、开启注解支持
+step 3: 在xml中把DiyPointCut和UserService注册为bean
+<bean id="diy" class="DiyPointCut"/>
+step 4: 在MyTest中
+获取spring context
+context.getBean("userService") // 注意动态代理的是接口，所以getBean是要get接口而不是接口的实现
+userService.rent()
+
+(17)整合Mybatis
+①导入相关jar包：junit、mybatis、mysql数据库相关、spring相关、aop织入、mybatis-spring
+②编写配置文件
+③测试
+
+2.Mybatis：ORM；把表映射为一个对象
+(1)编写实体类
+(2)编写核心配置文件
+(3)编写接口
+(4)编写Mapper.xml
+(5)测试
+
+3.es

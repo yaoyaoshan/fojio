@@ -1,0 +1,491 @@
+一 java基础
+1.装箱与拆箱
+内置类型：boolean，char，byte，short，int，long，float，double
+对应的封装类型：Boolean，Character，Byte，Short，Integer，Long，Float，Double
+Integer x = 2;     // 装箱 调用了 Integer.valueOf(2)
+int y = x;         // 拆箱 调用了 X.intValue()
+
+2.string转整型
+Integer.parseInt(s)
+Long.parseLong("123")
+
+3.类型转换
+Java 不能隐式执行向下转型，因为这会使得精度降低
+float f = 1.1 错误（字面量是double）
+float f = 1.1f 正确
+short s1=1;s1=s1+1 错误（s1+1时，short隐式转换为int，而s1是short）
+short s1=1;s1+=1 正确（使用 += 或者 ++ 运算符会执行隐式类型转换）
+
+4.基本类型与引用类型
+基本类型保存原始值，引用类型保存的是引用值（引用值就是指对象在堆中所处的位置/地址）
+基本类型：boolean，char，byte，short，int，long，float，double
+引用类型：数组、接口、类
+
+理解ListNode p = pHead;这句话：是把变量p对应的地方存放的地址赋值为pHead的地址
+
+5.int与Interger区别
+Integer是int的包装类，int则是java的一种基本数据类型
+Integer变量必须实例化后才能使用
+Integer实际是对象的引用，当new一个Integer时，实际上是生成一个指针指向此对象；而int则是直接存储数据值
+Integer的默认值是null，int的默认值是0
+包装类Integer和基本数据类型int比较时，java会自动拆包装为int，然后进行比较，实际上就变为两个int变量的比较
+应用场景区别：https://www.cnblogs.com/zhaoyu-dust/p/12112949.html
+*AtomicInteger：一个提供原子操作的Integer的类。在Java语言中，++i和i++操作并不是线程安全的（需要load assign store这三个原子操作），在使用的时候，不可避免的会用到synchronized关键字。而AtomicInteger则通过一种线程安全的加减操作接口，它对基本数据类型的自增（加1操作），自减（减1操作）、以及加法操作（加一个数），减法操作（减一个数）进行了封装，通过CAS保证这些操作是原子性操作
+*应用场景：
+使用int：为了高效，可以把一些数值小，简单的变量存放在栈中
+使用Integer：泛型不支持基本数据类型
+借鉴网上学生成绩的例子，没来考试，成绩是0还是null，如果你觉得是0就用int，如果你认为是null，就用Integer
+
+6.new与非new
+(1)Integer i = new Integer(n);
+i是引用类型
+i指向堆
+(2)Integer i = n;
+编译时会翻译为Integer i = Integer.valueOf(100)；
+n在-128~127之间时，i指向常量池【java对于-128到127之间的数，会进行缓存，Integer i = 127时，会将127进行缓存，下次再写Integer j = 127时，就会直接从缓存中取，就不会new了】
+否则，按照new Integer(i)进行处理，i指向堆
+
+7.比较
+Integer 与 int：相等（java会自动拆包装为int）
+new Integer 与 new Integer：不相等（地址不同）
+非new Integer 与 new Integer：不相等（一个在常量池，一个在堆中）
+非new Integer 与 非new Integer：n在-128~127之间时相等；否则不相等
+
+8.java的基本特性
+抽象（将一类对象的共同特征抽象出来构造类，包括数据抽象和行为抽象）、继承（从父类继承信息创建新类）、封装（隐藏具体实现，提供api）、多态（不同子类对同一消息做出不同响应）
+
+9.多态的实现方式
+编译时的多态：方法重载
+运行时的多态：方法重写（override），子类重写父类中已有的或抽象的方法，而用父类型引用来引用子类型的对象，会调用子类的方法
+【虚函数表：http://c.biancheng.net/view/267.html】
+
+10.重写与重载
+(1)重写
+指子类重写父类的方法
+名相同，参数列表相同，方法返回值相同
+①子类方法要比父类被重写方法更好访问（比如父类是public时，子类必须是public）
+②子类方法抛出的异常类型必须是父类抛出异常类型或为其子类型（因为里氏代换原则告诉我们，在软件中将一个基类对象替换成它的子类对象，程序将不会产生任何错误和异常）
+③子类方法的返回类型必须是父类方法返回类型或为其子类型
+使用 @Override 注解，可以让编译器帮忙检查是否满足上面的三个限制条件
+*注：不能重写static或private的变量或方法：方法覆盖是基于运行时动态绑定的，而static方法是编译时静态绑定的；private修饰的变量和方法只能在当前类中使用，如果是其他的类继承当前类是不能访问到private变量或方法的
+*方法调用优先级：
+    this.func(this)
+    super.func(this)
+    this.func(super)
+    super.func(super)
+
+(2)重载
+可以在一个类中也可以在继承关系的类中
+名相同
+参数列表不同（个数，顺序，类型）
+
+11.java中的“虚函数”
+https://www.cnblogs.com/jianglinliu/p/11833499.html
+
+12.PriorityQueue
+(1)实现：数组表示的小顶堆（节点的值总是不大于其孩子节点的值；完全二叉树）
+(2)添加元素：offer()和add()
+算法：添加元素位于末尾，同时队列长度加1，然后这个元素与它的父节点进行比较，如果比父节点小那么就与父节点进行交换，然后再与交换后的位置的父节点进行比较，重复这个过程，直到该元素的值大于父节点
+add：在插入失败时抛出异常
+offer：在插入失败时返回false
+O(logN)
+(3)获得但不删除堆顶元素：element()和peek()
+算法：直接返回数组0下标处的那个元素
+element：失败时抛出异常
+peek：失败时返回null
+(4)获取并删除队首元素：remove()和poll()
+算法：把队尾元素挪到队首，将其逐层向下与当前点的左右孩子中较小的那个交换，直到它小于或等于左右孩子中的任何一个为止
+remove：失败时抛出异常
+poll：失败时返回null
+
+13.创建对象的四种方法
+(1)使用new：调用构造器
+Hello h = new Hello();
+(2)使用反射机制：调用构造器
+①使用Constructor类的newInstance方法
+例一
+Class heroClass = Class.forName("yunche.test.Hello"); //yunche.test是package的名字
+Constructor constructor = heroClass.getConstructor();
+Hello h =(Hello) constructor.newInstance();
+例二
+Constructor<Person> constructor = Person.class.getInstance();
+Person person= constructor.newInstance();
+②使用Class类的newInstance方法：要求该类有无参构造器
+例一
+Class heroClass = Class.forName("yunche.test.Hello"); //yunche.test是package的名字
+Hello h =(Hello) heroClass.newInstance();
+例二
+Person person = Person.class.newInstance();
+(3)clone方法：JVM会新建一个对象，并分配新的内存空间；不调用构造器
+Person person = <Person>person.clone(); //前提是该类实现了Cloneable接口
+(4)使用反序列化：不调用构造器
+ObjectInputStream in = new ObjectInputStream (new FileInputStream("data.obj"));
+Person person = (Person)in.readObject(); //前提是该类实现了Serializable接口
+
+14.String相关
+是final类，不允许被继承
+String s = new String("Hello World"); 可能创建一个/两个对象，若静态区有"Hello World"，则只在堆中创建一个对象
+用+来连接String时，实际上会调用StringBuilder实例的append()方法
+String不可变；StringBuilder和StringBuffer可变
+StringBuffer线程安全（内部使用 synchronized 进行同步），StringBuilder不线程安全
+(1)String
+String 是不可变的对象, 因此在每次对 String 类型进行改变的时候其实都等同于生成了一个新的 String 对象，然后将指针指向新的 String 对象
+初始String值为“hello”，然后在这个字符串后面加上新的字符串“world”，这个过程是需要重新在栈堆内存中开辟内存空间的，最终得到了“hello world”字符串也相应的需要开辟内存空间
+(2)StringBuffer 和 StringBuilder 
+对象能够被多次的修改，并且不产生新的未使用对象
+StringBuilder 相较于 StringBuffer 有速度优势
+在应用程序要求线程安全的情况下，则必须使用 StringBuffer
+
+char a[] = "success!"; //这句后面就有'\0';
+char a[] = {'s','u','c','c','e','s','s','!'}; //这句后面就不会有'\0' 
+
+15.equals方法与hashCode方法
+重写equals方法后通常要重写hashCode方法
+要求：两对象equal时，hashCode必须相同；不equal的对象可以有相同的hashCode
+若两对象equal时hashCode不同，会导致散列集合（比如Set）中允许存储两个值相同而hashCode不同的对象
+(1)hashcode
+返回一个int整数，这个哈希码的作用是确定该对象在哈希表中的索引位置
+(2)equals
+如果对象重写了equals()方法，比较两个对象的内容是否相等；如果没有重写，比较两个对象的地址是否相同，价于“==”
+
+16.文件读取
+(1)获取文件句柄
+File file = new File(fileName);
+(2)解读
+//一次读取多个char
+Reader reader = new InputStreamReader(new FileInputStream(fileName));;
+char[] tempchars = new char[30];
+while ((charread = reader.read(tempchars)) != -1) ...
+//一次读取一行
+BufferedReader reader = new BufferedReader(new FileReader(file));
+while ((tempString = reader.readLine()) != null) ...
+
+17.反射
+含义：在运行状态中可以知道任何类的所有属性和方法、调用任何对象的所有属性和方法
+可以获得private成员的值
+Class对象中记录了class的信息
+
+18.一些缩写
+(1)JRE：Java 运行时环境
+包括Java虚拟机、Java核心类库和支持文件
+(2)JDK：Java 开发工具包
+包括JRE、编译器、调试器和其他工具，可以让开发者开发、编译、执行Java 应用程序
+(3)NDK：Native Development Kit，是 Android的一个工具开发包
+可通过 NDK在 Android中 使用 JNI与本地代码（如C、C++）交互
+(4)JNI：Java本地接口
+即在 Java代码 里调用 C、C++等语言的代码
+
+19.static
+(1)static方法
+类加载时就存在
+没有this，因此不能访问类的非静态成员变量和非静态成员方法
+最常见的static方法就是main方法，因为程序在执行main方法的时候没有创建任何对象，因此只有通过类名来访问
+必须实现，不能用abstract修饰
+不能被重写，因为方法重写是基于运行时动态绑定的，而static 方法是编译时静态绑定的
+只能访问所属类的静态字段和静态方法，方法中不能有 this 和 super 关键字，因此这两个关键字与具体对象关联
+(2)static变量
+被所有的对象所共享，在内存中只有一个副本
+当且仅当在类初次加载时会被初始化
+(3)static代码块
+在类初次被加载的时候，会按照static块的顺序来执行每个static块，并且只会执行一次
+很多时候会将一些只需要进行一次的初始化操作都放在static代码块中进行
+(4)静态导包
+import static com.xxx.ClassName.*
+在使用静态变量和方法时不用再指明 ClassName，从而简化代码，但可读性大大降低
+
+20.final
+(1)final方法
+可被继承
+不能被子类修改
+private 方法隐式地被指定为 final
+(2)final类
+不能被继承
+(3)final形参
+final形参不可变
+(4)final基本类型
+该值为常量，不可修改
+final int i = 9;
+//错误：i = 10;
+(5)final引用类型
+该值为对常量的引用
+final int[] arr = {1,2,3,45};
+//正确：arr[3] = 999;
+//错误：arr = new int[]{1,4,56,78};
+
+21.执行顺序
+从类A的main开始时的执行顺序
+(1)类A没有父类时
+A的静态代码块/变量-A的实例变量/普通代码块-A的main
+若A的main中有new A，则：A的非静态代码块—A的构造函数
+(2)类A有父类B时
+B的静态代码块/变量-A的静态代码块/变量-B的实例变量/普通代码块-A的实例变量/普通代码块-A的main
+若A的main中有new B，则：父类非静态代码块-父类构造方法
+若A的main中有new A，则：父类非静态代码块-父类构造方法（默认调用无参构造方法）-子类非静态代码块-子类构造方法
+
+初始化类A的执行顺序
+(1)类A没有父类时
+A的静态代码块/变量-A的非静态代码块/变量-A的构造方法
+(2)类A有父类B时
+B的静态代码块/变量-A的静态代码块/变量-B的实例变量/普通代码块-B的构造方法-A的实例变量/普通代码块-A的构造方法
+
+22.Java NIO
+实际上就是多路复用IO（同步非阻塞）
+https://www.cnblogs.com/aspirant/p/8630283.html
+(1)与普通IO的区别
+I/O 以流的方式处理数据（一次处理一个字节），而 NIO 以块的方式处理数据（一次处理一个数据块）
+NIO是非阻塞的
+(2)channel 通道
+是对原 I/O 包中的流的模拟，可以通过它读取和写入数据
+通道与流的不同之处在于，流只能在一个方向上移动(一个流必须是 InputStream 或者 OutputStream 的子类)，而通道是双向的，可以用于读、写或者同时用于读写
+(3)buffer 缓冲区
+不会直接对通道进行读写数据，而是要先经过缓冲区
+缓冲区实质上是一个数组
+(4)selector 选择器
+NIO 实现了 IO 多路复用中的 Reactor 模型，一个线程 Thread 使用一个选择器 Selector 通过轮询的方式去监听多个通道 Channel 上的事件，从而让一个线程就可以处理多个事件
+当 Channel 上的 IO 事件还未到达时，就不会进入阻塞状态一直等待，而是继续轮询其它 Channel，找到 IO 事件已经到达的 Channel 执行
+因为创建和切换线程的开销很大，因此使用一个线程来处理多个事件而不是一个线程处理一个事件，对于 IO 密集型的应用具有很好地性能
+
+23.Java的四种引用
+(1)强引用
+创建一个对象并把这个对象赋给一个引用变量
+Object object =new Object(); 或 String str ="hello";
+强引用有引用变量指向时永远不会被垃圾回收，JVM宁愿抛出OutOfMemory错误也不会回收这种对象
+如果想中断强引用和某个对象之间的关联，可以显示地将引用赋值为null
+(2)软引用
+SoftReference<Object> sf = new SoftReference<Object>(obj);
+obj = null;  // 使对象只被软引用关联
+如果一个对象具有软引用，内存空间足够，垃圾回收器就不会回收它；如果内存空间不足了，就会回收这些对象的内存
+在虚拟机抛出OutOfMemoryError之前回收软可及对象，而且虚拟机会尽可能优先回收长时间闲置不用的软可及对象
+可用来实现网页缓存、图片缓存等
+SoftReference类所提供的get()方法返回Java对象的强引用；回收后get()返回null
+MyObject aRef = new  MyObject();  
+SoftReference aSoftRef=new SoftReference(aRef); //此时该对象为强可及对象
+MyObject anotherRef=(MyObject)aSoftRef.get();
+(3)弱引用
+被弱引用关联的对象一定会被回收，也就是说它只能存活到下一次垃圾回收发生之前
+当JVM进行垃圾回收时，无论内存是否充足，都会回收被弱引用关联的对象
+WeakReference<People>reference=new WeakReference<People>(new People());
+(4)虚引用
+PhantomReference<Object> pf = new PhantomReference<Object>(obj, null);
+随时可能被回收
+一个对象是否有虚引用的存在，完全不会对其生存时间构成影响，也无法通过虚引用取得一个对象的实例（PhantomReference的get方法总是返回null）
+为一个对象设置虚引用关联的唯一目的就是能够在这个对象被垃圾回收器回收掉后收到一个通知
+
+24.finalize
+finalize()方法会在对象被回收前调用
+finalize()方法中一般用于释放非Java资源（如打开的文件资源、数据库连接等）,或是调用非Java方法（native方法）时分配的内存（比如C语言的malloc()系列函数）
+
+25.finally
+用在try/catch语句块后面，表示这段语句最终一定会被执行（不管有没有抛出异常），经常被用在需要释放资源的情况下
+https://www.cnblogs.com/Jacck/p/7729752.html
+
+26.访问权限
+(1)可见性
+类可见表示其它类可以用这个类创建实例对象
+成员可见表示其它类可以用这个类的实例对象访问到该成员
+(2)访问修饰符
+public：所有其他类都可以访问
+protected：当前类、子类、相同包内的其他类可以访问
+default：本包内可以使用
+private：本类内可以使用
+访问修饰符	所在类		同一包内其他类	其他包内子类	其他包内非子类
+private 	可以访问 	不可以 			不可以 		不可以
+缺省 		可以 		可以 			不可以 		不可以
+protected 	可以 		可以 			可以 		不可以
+public 		可以 		可以 			可以 		可以
+
+27.Object类
+是所有类的祖先
+所有对象（包括数组）都实现这个类的方法
+(1)hashCode方法
+返回该对象的哈希码值；默认情况下，该方法会根据对象的地址来计算
+一般对象独有一个哈希码值
+重写的栗子：将每个域都当成 R 进制的某一位，然后组成一个 R 进制的整数，R一般取31，因为它是一个足够大的奇素数
+(2)getClass方法
+SomeClass obj = new SomeClass();
+Class c = obj.getClass();
+String s = c.getName(); //获得类名
+(3)toString方法
+一般会重写这个，不然默认的是类名+@+哈希码值
+(4)equals方法
+指示其他某个对象是否与此对象“相等”
+一般会重写这个，不然默认方法比较的是对象的引用值（即地址）是否相同
+(5)wait()、notify/notifyAll() 方法
+是final，无法被重写
+wait()执行后拥有当前锁的线程会释放该线程锁，并处于等待状态（等待重新获取锁）
+notify/notifyAll()执行后会唤醒处于等待状态线程获取线程锁、只是notify()只会随机唤醒其中之一获取线程锁，notifyAll()会唤醒所有处于等待状态的线程抢夺线程锁
+(6)finalize方法
+一般会重写，否则函数体是空的
+(7)clone方法
+clone() 是 Object 的 protected 方法，它不是 public，一个类不显式去重写 clone()，其它类就不能直接去调用该类实例的 clone() 方法
+clone方法执行的是浅拷贝（即拷贝对象和原始对象的引用类型引用同一个对象）
+Cloneable 接口规定，如果一个类没有实现 Cloneable 接口又调用了 clone() 方法，就会抛出 CloneNotSupportedException
+最好使用拷贝构造函数而不是clone
+
+28.==与equals方法
+基本类型没有equals方法
+没有重写时，equals方法和==等价：对基础类型比较值，对引用类型比较地址
+重写后equals由用户定义
+StringBuffer和StringBuilder：equals和==都是比较地址
+String和Integer：重写了equals，比较值；==还是比较地址
+
+29.异常
+所有的异常都有一个共同的祖先Throwable，它有两个直接子类：Error Exception
+Exception能被程序本身处理（比如类型转换异常、空指针异常），Error则JVM无法处理（如虚拟机错误、内存溢出、线程死锁）
+Exception分为运行时异常和非运行时异常（即编译异常、可查异常）
+不可查异常包括运行时异常和Error（程序崩溃并无法恢复），可查异常是非运行时异常（处理异常后可以恢复）
+当程序中可能出现可查异常，要么用try-catch语句捕获它（从发生异常的方法开始，依次回查调用栈中的方法，直至找到含有合适异常处理器的方法并执行），要么用throws子句声明抛出它（创建异常对象并交付运行时系统），否则编译不会通过；出现不可查异常则应该修改程序
+
+30.ThreadLocal
+是一个线程内部的存储类，可以在指定线程内存储数据，数据存储以后，只有指定线程可以得到存储数据
+每一个线程读取的变量是对应的互相独立的
+通过get和set方法就可以得到当前线程对应的值
+实际上是ThreadLocal的静态内部类ThreadLocalMap为每个Thread都维护了一个数组table，ThreadLocal确定了一个数组下标，而这个下标就是value存储的对应位置
+Synchronized是通过线程等待，牺牲时间来解决访问冲突；ThreadLocal是通过每个线程单独一份存储空间，牺牲空间来解决冲突，并且相比于Synchronized，ThreadLocal具有线程隔离的效果，只有在线程内才能获取到对应的值，线程外则不能访问到想要的值
+
+31.comparable 接口和comparator 接口
+(1)comparable
+可以认为是一个内比较器：System.out.println(d1.compareTo(d2));
+实现了Comparable接口的类可以和自己比较依赖compareTo方法的实现
+compareTo方法也被称为自然比较方法,如果开发者add进入一个Collection的对象想要Collections的sort方法帮你自动进行排序的话，那么这个对象必须实现Comparable接口
+compareTo方法的返回值是int
+(2)comparator
+可以认为是一个外比较器：DomainComparator dc = new DomainComparator(); System.out.println(dc.compare(d1, d2));
+使用情形：一个对象不支持自己和自己比较（没有实现Comparable接口），但是又想对两个对象进行比较；一个对象实现了Comparable接口，但是开发者认为compareTo方法中的比较方式并不是自己想要的那种比较方式
+
+32.抽象类与接口
+(1)抽象类：用abstract修饰声明的类
+C++抽象类 == Java抽象类
+抽象类中可以有数据成员和非抽象方法
+抽象类其实是一个半虚半实的东西，可以全部为虚，这时候变成接口
+不能被实例化
+可以包含静态方法和静态变量
+抽象方法的访问类型可以是public ，protected和private
+可以有构造函数，作用是：在初始化子类时调用，可以用来初始化抽象类内部声明的通用变量。另外，即使你没有提供任何构造函数，编译器将为抽象类添加默认的无参数的构造函数，没有的话你的子类将无法编译，因为在任何构造函数中的第一条语句隐式调用super()，Java中默认超类的构造函数
+一个类只能继承一个抽象类
+抽象类可以通过使用关键字implements来实现接口。因为它们是抽象的，所以它们不需要实现所有的方法
+抽象类不能是final的：将它们声明为final 的将会阻止它们被继承，而这正是使用抽象类唯一的方法
+(2)接口：用interface修饰的类
+C++虚基类 == Java接口
+接口中不能有普通成员变量，也不能具有非纯虚函数：全虚
+不能有构造方法
+不能有静态方法
+但接口中的抽象方法只能是public类型的，并且默认即为public abstract类型
+可以包含静态成员变量，接口中定义的变量只能是public static类型，并且默认为public static final类型
+一个类可以实现多个接口
+接口没有main方法，因此我们不能运行它
+(3)使用场景
+类是对事物的抽象，抽象类是对类的抽象，接口是对抽象类的抽象
+在设计类的时候，首先考虑用接口抽象出类的特性，当你发现某些方法可以复用的时候，可以使用抽象类来复用代码
+①使用接口：需要让不相关的类都实现一个方法；需要使用多重继承
+②使用抽象类：需要在几个相关的类中共享代码
+
+33.虚函数与纯虚函数
+(1)虚函数
+Java中其实没有虚函数的概念，它的普通函数就相当于C++的虚函数，动态绑定是Java的默认行为。如果Java中不希望某个函数具有虚函数特性，可以加上final关键字变成非虚函数
+C++虚函数 == Java普通函数
+(2)纯虚函数：即抽象函数，加abstract修饰的函数
+C++纯虚函数 == Java抽象函数
+抽象函数或者说是纯虚函数的存在是为了定义接口
+
+34.RunTime类
+每个java程序在运行时相当于启动了一个JVM进程，每个JVM进程都对应一个RunTime实例。此实例是JVM负责实例化的，所以我们不能实例化一个RunTime对象，只能通过getRuntime() 获取当前运行的Runtime对象的引用。一旦得到了一个当前的Runtime对象的引用，就可以调用Runtime对象的方法去查看Java虚拟机的状态以及控制虚拟机的行为。
+单例设计模式：public static Runtime getRuntime()
+
+35.不可变类与可变类
+(1)不可变类
+不可变类是指这个类的实例一旦创建完成后，就不能改变其成员变量值，如：Integer、String、Long、Double
+(2)可变类
+可变类创建实例后可以改变其成员变量值
+可变类的设计需注意：
+①添加final修饰符，保证类不被继承：因为只要继承类覆盖父类的方法并且继承类可以改变成员变量值，那么一旦子类以父类的形式出现时，不能保证当前类是否可变
+②保证所有成员变量必须私有，并且加上final修饰：保证成员变量不可改变
+③不提供改变成员变量的方法，包括setter
+④通过构造器初始化所有成员，进行深拷贝
+⑤在getter方法中，不要直接返回对象本身，而是克隆对象，并返回对象的拷贝
+
+36.传值与传引用
+基本数据类型传值，对形参的修改不会影响实参
+引用类型传引用，形参和实参指向同一个内存地址
+不可变类特殊处理，可以理解为传值
+
+37.T和？的区别
+见PDF P48 code
+
+38.非静态内部类
+内部类可以访问外围类的成员和方法（用外部类创建内部类对象时，此内部类对象会秘密的捕获一个指向外部类的引用，于是，可以通过这个引用来访问外围类的成员）
+内部类对象通过‘外部类名.this.xxx’的形式访问外部类的属性与方法
+外部类可以访问内部类的所有方法与属性，包括私有方法与属性
+非静态内部类依赖于外部类的实例，也就是说需要先创建外部类实例，才能用这个实例去创建非静态内部类
+
+39.嵌套类：即静态内部类
+要创建嵌套类的对象，并不需要其外围类的对象
+不能够从静态内部类的对象中访问外部类的非静态成员
+用外部类创建嵌套类对象时，此嵌套类对象不会秘密的捕获一个指向外部类的引用
+静态内部类适用于包含类当中，但又不依赖与外在的类
+
+40.匿名类
+https://www.jianshu.com/p/a59a31eb3a41
+
+41.super
+作用一：在子类中调用被重写的父类方法
+super.dosth()
+作用二：在子类中访问继承自父类的变量（public和protected）
+super.sth
+作用三：在子类的构造函数中调用父类的构造函数
+super()：调用父类的无参构造函数，可以不写
+super(args)：调用父类对应的构造函数，写了这个就不再默认调用super()了
+
+42.与c++区别
+Java 是纯粹的面向对象语言，所有的对象都继承自 java.lang.Object，C++ 为了兼容 C 即支持面向对象也支持面向过程。
+Java 通过虚拟机从而实现跨平台特性，但是 C++ 依赖于特定的平台。
+Java 没有指针，它的引用可以理解为安全指针，而 C++ 具有和 C 一样的指针。
+Java 支持自动垃圾回收，而 C++ 需要手动回收。
+Java 不支持多重继承，只能通过实现多个接口来达到相同目的，而 C++ 支持多重继承。
+Java 不支持操作符重载，虽然可以对两个 String 对象执行加法运算，但是这是语言内置支持的操作，不属于操作符重载，而 C++ 可以。
+Java 的 goto 是保留字，但是不可用，C++ 可以使用 goto
+
+43.hash算法
+加法hash：直接把元素全加起来
+位运算hash：利用各种位运算（如异或和移位）
+乘法hash
+查表hash
+
+44.jdk 8新特性
+(1)lambda表达式：Lambda 允许把函数作为一个方法的参数；可以使语言的构造更紧凑简洁，减少冗余代码
+Collections.sort(names, (String a, String b) -> {
+    return b.compareTo(a);
+});
+(2)方法引用：可以直接引用已有Java类或对象（实例）的方法或构造器
+(3)默认方法：给接口添加一个非抽象的方法实现，只需要使用 default关键字即可
+(4)流式编程
+List<Integer> evens = nums.stream().filter(num -> num % 2 == 0).collect(Collectors.toList());
+stream()操作将集合转换成一个流，filter()执行我们自定义的筛选处理，这里是通过lambda表达式筛选出所有偶数，最后我们通过collect()对结果进行封装处理，并通过Collectors.toList()指定其封装成为一个List集合返回
+有点像sql
+(5)添加Date Time API：加强对日期与时间的处理
+(6)支持多重注解：允许我们把同一个类型的注解使用多次，只需要给该注解标注一下@Repeatable即可
+
+45.形参类型尽量用接口/父类，这样支持多态（因为java默认是虚函数，可以动态绑定）；因此调用方法得到的结果一般需要强制类型转换为子类
+
+46.类型转换
+(1)子类转父类
+无需强转；只能调用父类的变量；当父类中定义某方法，子类中未定义时，默认执行父类的方法，如果子类中定义同名同参数的方法，即为对父类的覆盖，最终执行子类的方法
+SomeInterface someInterface = (SomeInterface) getSomeImplementation(); 
+(2)父类转子类
+需要强转；只有父类对象本身就是用子类new出来的时候, 才可以在将来被强制转换为子类对象
+Base base = new Kid(); // 虽然base是一个父类型的引用，但是这个父类引用指向是子类型的实例
+Kid kid = (Kid) base; // 让子类型的引用指向子类型的实例
+
+47.关于导包
+java默认启动会自动导入java.lang包，而math包的完整路径是：java.lang.Math,即不需要显式导入math 
+
+48.初始化
+(1)类的成员变量
+【jvm会自动初始化：若给了初始值则用它，若没给则用默认初始值】
+默认初始值：int-0 float-0.0f double-0.0 boolean-false char-0 long-0 对象-null
+静态变量在类加载（即第一次使用该类）时初始化，其他变量在实例化时初始化
+*数组：
+int[] a; // a=null
+int[] a = new int[10]; // a中的每个元素都是0
+(2)方法里的局部变量
+【必须初始化，未初始化则不允许使用】

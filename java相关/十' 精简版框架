@@ -1,0 +1,467 @@
+十' 精简版框架
+1.spring
+(1)对ioc的理解
+IoC 是指在程序开发中，实例的创建不再由调用者管理，而是由 Spring 容器创建，控制权由程序代码转移到了 Spring 容器中，控制权发生了反转
+只需要在配置文件中进行配置即可，spring会用基于反射机制的依赖注入把需要的对象动态注入到程序中
+
+(2)ioc容器的分类
+①BeanFactory
+	是一个接口，管理 Bean 的工厂，它主要负责初始化各种 Bean，并调用它们的生命周期方法
+	最常见的实现类是XmlBeanFactory：根据 XML 配置文件中的定义装配 Bean 
+②ApplicationContext
+	是BeanFactory的子接口，不仅提供了 BeanFactory 的所有功能，还添加了对 i18n（国际化）、资源访问、事件传播等方面的良好支持
+	常用的实现类：
+		a. ClassPathXmlApplicationContext
+		从类路径 ClassPath 中寻找指定的 XML 配置文件，找到并装载完成 ApplicationContext 的实例化工作
+		ApplicationContext applicationContext = new ClassPathXmlApplicationContext("xxx.xml");
+		常用于java项目中
+		b. FileSystemXmlApplicationContext
+		从指定的文件系统路径中寻找指定的 XML 配置文件，找到并装载完成 ApplicationContext 的实例化工作
+		ApplicationContext applicationContext = new FileSystemXmlApplicationContext("F：/workspaces/xxx.xml");
+		常用于web项目中，基于 ContextLoaderListener 实现
+③BeanFactory和ApplicationContext的区别
+	如果 Bean 的某一个属性没有注入，则使用 BeanFacotry 加载后，在第一次调用 getBean() 方法时会抛出异常，而 ApplicationContext 则在初始化时自检，这样有利于检查所依赖的属性是否注入
+
+(3)在测试类中使用
+①使用xml
+    // 定义Spring配置文件的路径
+    String xmlPath = "applicationContext.xml";
+    // 初始化Spring容器，加载配置文件
+    ApplicationContext applicationContext = new ClassPathXmlApplicationContext(
+            xmlPath);
+    // 通过容器获取personDao实例
+    PersonDao personDao = (PersonDao) applicationContext
+            .getBean("personDao");
+    // 调用 personDao 的 add ()方法
+    personDao.add();
+②使用javaconfig
+	ApplicationContext context＝new AnnotationConfigApplicationContext(XiuConfig.class)
+	... // 后面是一样的
+
+(4)bean的作用域
+①单例模式 Singleton：默认作用域
+	<bean ... scope="Singleton">
+	每个Spring ioc容器中一个id对应同一个对象
+	从一个ioc容器中通过相同的id get的Bean是同一个对象
+	从不同ioc容器中...不是同一个对象
+②原型模式 Prototype：一般用于多线程
+	<bean ... scope="Prototype">
+	从一个ioc容器中通过相同的id get的Bean是不同的对象（每次getBean会新建一个对象）
+③request、session、application：只能在web开发中使用
+	request：在请求中创建，创建完对象即失效；一次http请求中id相同的Bean都是同一个Bean，不同的请求创建不同的Bean
+	session：会一直在session中活着；一个session中id相同的Bean都是同一个Bean，不同的session创建不同的Bean
+	application：全局唯一；每个应用程序可以有多个ioc容器，全局唯一意味着不同ioc容器中相同的id也对应同一个对象
+
+(5)bean的生命周期
+①生命周期的过程
+	a. 实例化 Bean（也就是 new）
+	b. 按照spring上下文利用依赖注入完成 Bean 中所有属性值的配置注入（也就是 ioc注入）
+	c. 、如果这个Bean 已经实现了BeanNameAware 接口，会调用它实现的setBeanName(String)方法，此处传递的就是Spring 配置文件中Bean 的id 值
+	d. 如果这个Bean 已经实现了BeanFactoryAware 接口，会调用它实现的setBeanFactory(setBeanFactory(BeanFactory)传递的是Spring 工厂自身
+	e. 如果这个Bean 已经实现了ApplicationContextAware 接口，会调用setApplicationContext(ApplicationContext)方法，传入Spring 上下文
+	f. 其他接口及其实现
+	g. 如果在 <bean> 中指定了该 Bean 的作用范围为 scope="singleton"，则将该 Bean 放入 Spring IoC 的缓存池中，将触发 Spring 对该 Bean 的生命周期管理；如果在 <bean> 中指定了该 Bean 的作用范围为 scope="prototype"，则将该 Bean 交给调用者，调用者管理该 Bean 的生命周期，Spring 不再管理该 Bean
+	h. 如果 Bean 实现了 DisposableBean 接口，则 Spring 会调用 destory() 方法将 Spring 中的 Bean 销毁；如果在配置文件中通过 destory-method 属性指定了 Bean 的销毁方法，则 Spring 将调用该方法对 Bean 进行销毁
+
+(6)spring加载properties文件
+①properties文件的格式
+	dataSource=com.mchange.v2.c3p0.ComboPooledDataSource
+	driverClass=com.mysql.jdbc.Driver
+	user=root
+	password=root
+②加载方法一
+	a. xml中写
+		<context:property-placeholder location="classpath:conn.properties"/>
+		<bean id="dataSource" class="${dataSource}"> <!-- 这些配置Spring在启动时会去conn.properties中找 -->
+			<property name="driverClass" value="${driverClass}" />
+			<property name="jdbcUrl" value="${jdbcUrl}" />
+			<property name="user" value="${user}" />
+			<property name="password" value="${password}" />
+		</bean>
+③加载方法二
+	a. xml中写
+		<bean id="prop" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+		 	<property name="locations">
+		 		<array>
+		 			<value>classpath:conn.properties</value>
+		 		</array>
+		 	</property>
+	 	</bean>
+	 b. 类定义中的set方法上写
+	 	@Value("#{prop.dataSource}")
+
+(7)Spring手动装配Bean的方法
+1) 直接在xml中配
+	①通过 setter 注入
+		a. 类中提供对应属性的set方法和无参构造器【spring会先调用无参构造器实例化bean，再通过反射机制调用setter进行注入】
+		b. xml文件中配置
+			<bean id="hello" class="Hello"> 
+				<property name="name" value="Irene"/> // 普通值注入
+				<property name="address" ref="address"/> // 对象注入（即Bean注入，address是一个定义好的Bean）
+			</bean>
+	②通过构造器注入
+		- 无论是否调用了getBean()，配置中的对象都会被创建（即会调用对象的构造器），或者说：加载完配置之后就通过构造器完成了实例化
+		- 类中需提供与xml中配的对应的构造器
+		- 默认使用无参构造创建对象，若要使用有参构造，可以改配置为：
+			a. 通过下标（index）
+				<bean id="user" class="com.kuang.pojo.User">
+					<constructor-arg index="0" value="java"> // 把user中的第一个成员变量值设置为java
+				</bean>
+			b. 通过参数类型
+				<bean id="user" class="com.kuang.pojo.User">
+					<constructor-arg type="java.lang.String" value="java"> // 把user中类型为String的成员变量值设置为java，要求User中只有一个类型为String的成员变量
+				</bean>
+			c. 通过参数名
+				<bean id="user" class="com.kuang.pojo.User">
+					<constructor-arg name="name" value="java">
+				</bean>
+2) 注解+xml（@Component,@Service,@Controler,@Repository）
+	- 四个注解本质等价
+		@Component：用于通用的Bean
+		@Repository：用于dao层，是实体类，和@Component的作用相同
+		@Service：用于业务层，...
+		@Controller：用于控制层，...
+	- 在类的定义文件中，在类名的上面加上@Component
+	- 在xml中，导入约束、开启对注解的支持
+		<bean xmlns:context＝“http ... context”等>
+		<context annotation-config/>
+	- 若被注解的类不在启动类的根路径或者子路径下，在xml中加入<component-scan />
+3) 注解+javaconfig（@Configuration,@ComponentScan,@Component）
+	- 在XiuConfig类的定义上加@Configuration，标识其为配置类
+	- 在XiuConfig类的定义上加@ComponentScan(要扫描的包名，User类在该包中)
+	- 在User类的定义上加@Component
+4) 注解+javaconfig（@Configuration,@Bean）
+	- 在XiuConfig类的定义上加@Configuration，标识其为配置类
+	- 在XiuConfig类中的某个方法上加@Bean("bean id")，表示在该方法中new的对象（一般是作为该方法的返回值）会被注册为Bean
+5) 注解+javaconfig（@Configuration,@Import）
+	- 在XiuConfig、XiuConfig1类的定义上加@Configuration，标识其为配置类
+	- 在XiuConfig的定义上加上@Import(XiuConfig1.class)，表示把XiuConfig1中的Bean注册到XiuConfig中
+6) xml+properties
+	见“(6)spring加载properties文件”
+
+(8)spring中自动装配bean的方法
+1) xml
+	(Spring会在上下文中自动寻找并给对象配置属性)
+	a. byName
+		- 类的定义中写set方法
+		- xml中写 <bean ... autowire＝“byName”>
+		- 会自动在容器上下文中查找当前对象有的set方法后面的名字对应的Bean id（不区分大小写），进行装配
+		- 前提：上下文中与各set方法名相同的id都只有一个
+	b. byType
+		- 类的定义中写set方法
+		- xml中写 <bean ... autowire＝“byType”>
+		- 会自动在容器上下文中查找当前对象可以set的属性类型对应的Bean，进行装配
+		- 前提：上下文中各属性类型的Bean都只有一个
+2) 注解
+	a. @Autowired 和 @Qualifier()
+		- 在xml中，导入约束、开启对注解的支持
+			<bean xmlns:context＝“http ... context”等>
+			<context annotation-config/>
+		- 若被注解的类不在启动类的根路径或者子路径下，在xml中加入<component-scan />
+		- 在xml中创建该类的bean【使用Autowired注入的对象必须在上下文中存在！】
+		- 在类的定义中对应的成员变量前面一行或者对应的set方法前一行加入@Autowired【在成员变量前一行加入注解后，可以不用在类的定义内写对应的set方法了，因为注解是通过反射实现的】
+		- spring会先检查是否符合byType的条件，符合就用它，否则可以在@Autowired下加一行@Qualifier(value＝“someBeanId”)指定使用byName
+	b. @Resource
+		- 是jdk原生注解，不导入Spring也可以用
+		- 和@Autowired类似，但顺序不同：先试byName，再试byType
+
+(8)spring中的部分注解
+①用注解注入bean：@Component
+	写在类的定义上面
+	表示该类已交付给spring托管，是spring容器中的bean
+	其bean id默认是类名的小写
+②用注解注入配置类：@Configuration
+	祖先就是@Component
+	写在类的定义上面
+	表示该类为配置类，是spring容器中的bean
+③用注解注入属性值：@Value
+	a. 在类的定义文件中，在成员变量的定义语句上面加上@Value(要设置的值) 【允许没有对应的set方法】
+	b. 在类的定义文件中，在成员变量对应的set方法上面加上@Value(要设置的值)
+④用注解进行自动装配
+	见“(8)spring中自动装配bean的方法-2)”
+⑤用注解注入bean的作用域：@Scope
+	在类的定义文件中，在类名上面加上@Scope(“singleton”)
+⑥注解与xml的比较
+	xml：万能，适用于任何场合；维护简单方便
+	注解：只能对当前类的对象进行注入，无法引用其他类；维护相对复杂
+	通常选择：xml用来管理Bean（即实现Bean的注入），注解只负责完成属性的注入
+
+(9)对aop的理解
+面向切面编程，主要作用是对业务逻辑的各个部分进行隔离，降低耦合性，允许在不改变原代码的同时新增功能
+将影响了多个类的公共行为封装到一个可重用模块
+底层是动态代理
+aop把软件系统分为核心关注点（即业务处理的主要流程）和横切关注点（即其他部分，常发生在核心关注点的多处，且各处基本相似；比如权限认证、日志、事务处理）
+
+(10)对代理的理解
+①用代理的好处：为被代理类预处理消息、过滤消息，再将消息转发给被代理类，得到结果后，还可以对结果进行封装处理 --> 公共业务交给代理角色，被代理角色只需专注于核心代码
+②用动态代理的好处：不用为每个被代理类都写死一个代理；代理管理器可以通过反射得到要代理的接口，动态生成代理（即对代理进行实例化）
+
+③静态代理的实现
+	- 创建一个接口 HelloInterface
+	- 被代理类 Hello 和代理类 HelloProxy 都实现这个接口
+	- 代理类中引用被代理类的对象
+		private HelloInterface helloInterface = new Hello();
+	- 在代理类中调用被代理类
+		void sayHello() {
+	        System.out.println("Before invoke sayHello" );
+	        helloInterface.sayHello();
+	        System.out.println("After invoke sayHello");
+	    }
+	- 调用代理类
+		public static void main(String[] args) {
+	        HelloProxy helloProxy = new HelloProxy();
+	        helloProxy.sayHello();
+	    }
+④动态代理的实现
+	- 接口、被代理类不变
+	- 代理类处理器实现 InvocationHandler 接口
+		public class ProxyHandler implements InvocationHandler{
+		    private Object object;
+		    public ProxyHandler(Object object){
+		        this.object = object;
+		    }
+		    @Override
+		    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+		        System.out.println("Before invoke "  + method.getName());
+		        method.invoke(object, args);
+		        System.out.println("After invoke " + method.getName());
+		        return null;
+		    }
+		}
+	- 调用代理类处理器
+		public static void main(String[] args) {
+	        HelloInterface hello = new Hello();
+	        InvocationHandler handler = new ProxyHandler(hello);
+	        // 返回代理类的实例
+	        HelloInterface proxyHello = (HelloInterface) Proxy.newProxyInstance(hello.getClass().getClassLoader(), hello.getClass().getInterfaces(), handler);
+
+	        proxyHello.sayHello();
+	    }
+
+(11)spring实现aop的方法
+a. 导入织入包
+	法一：使用spring的接口
+		step 1: 定义切面（以前置通知为例）
+			class Log implements MethodBeforeAdvice {
+			  void before(Method method, Object[] args, Object o) { // method是真实对象的方法，o是真实对象
+			     print o.getClass.getName+“的”+method.getName+“被执行了”
+			  }
+			}
+		step 2: 在xml中导入aop的约束
+		step 3: 在xml中把Log和UserService注册为bean
+		step 4: 在xml中配置aop
+			<aop:config>
+				<aop:pointcut id="pointcut" expression="execution(* UserServiceImpl.*(..))"/> // 定义切入点
+				<aop:advisor advice-ref="log" pointcut-ref="pointcut"/> // 在切入点切入切面
+			</aop:config>
+		step 5: 在MyTest中
+			获取spring context
+			context.getBean("userService") // 注意动态代理的是接口，所以getBean是要get接口而不是接口的实现
+			userService.rent()
+	法二：使用自定义类
+		step 1: 定义切面的类
+			class DiyPointCut {
+				void mybefore() print "方法执行前"
+			}
+		step 2: 在xml中导入aop的约束
+		step 3: 在xml中把DiyPointCut和UserService注册为bean 
+			<bean id="diy" class="DiyPointCut"/>
+		step 4: 在xml中配置aop
+			<aop:config>
+				<aop:aspect ref="diy"> // 定义切面
+					<aop:pointcut id="pointcut" expression="execution(* UserServiceImpl.*(..))"/> // 定义切入点
+					<aop:before method="mybefore" pointcut-ref="pointcut"/> // 在切入点切入切面
+				</aop:aspect>
+			</aop:config>
+		step 5: 在MyTest中
+			获取spring context
+			context.getBean("userService") // 注意动态代理的是接口，所以getBean是要get接口而不是接口的实现
+			userService.rent()
+	法三：使用注解
+		step 1: 定义切面的类并加入注解
+			@Aspect // 标注这个类是一个切面
+			class DiyPointCut {
+				@Before("execution(* UserServiceImpl.*(..))")
+				void mybefore() print "方法执行前"
+			}
+		step 2: 在xml中导入aop的约束、开启注解支持
+		step 3: 在xml中把DiyPointCut和UserService注册为bean
+			<bean id="diy" class="DiyPointCut"/>
+		step 4: 在MyTest中
+			获取spring context
+			context.getBean("userService") // 注意动态代理的是接口，所以getBean是要get接口而不是接口的实现
+			userService.rent()
+
+(12)spring中的事务管理
+①编程式事务管理
+	需要在代码中加入对事务的管理，调用beginTransaction()、commit()、rollback()等事务管理相关的方法
+	栗子
+		public boolean transfer(Long fromId， Long toId， double amount) {
+			TransactionStatus txStatus = txManager.getTransaction(txDefinition);
+			boolean result = false;
+			try {
+				result = bankDao.transfer(fromId， toId， amount);
+				txManager.commit(txStatus);
+			} catch (Exception e) {
+				result = false;
+				txManager.rollback(txStatus);
+				System.out.println("Transfer Error!");
+			}
+			return result;
+		}
+②声明式事务管理
+	- 概述
+		声明式事务的实现就是通过环绕增强的方式，在目标方法执行之前开启事务，在目标方法执行之后提交或者回滚事务
+		Spring采用AOP来实现声明式事务
+	- 实现方法
+		a. 在xml中注册 transactionManager
+			<bean id="transactionManager" class="...">
+				<constructor-arg ref="dataSource"/>
+			</bean>
+		b. 结合aop实现事务的织入
+			*配置事务通知
+				<tx:advice id="txAdvice" transaction-manager="transactionManager">
+					<tx:attributes>
+						<tx:method name="add" propagation="REQUIRED"/> // 给add方法配置事务，传播属性是 REQUIRED
+						<tx:method name="query" read-only="true"/>
+					</attributes>
+				<tx>
+			*配置事务切入
+				<aop:config>
+					<aop:pointcut id="txPointCut" expression="execution(* xxx.mapper.*.*(..))"/>
+					<aop:advisor advice-ref="txAdvice" pointcut-ref="txPointCut"/>
+				</aop:config>
+	- Spring事务抽象
+		无论是全局事务还是本地事务，JTA、JDBC、Hibernate还是JPA，Spring都使用统一的编程模型（如下），使得应用程序可以很容易地在全局事务与本地事务，或者不同的事务框架之间进行切换
+		a. PlatformTransactionManager 接口
+			- 事务管理器
+			- 定义了事务操作的行为
+				*getTransaction：根据事务属性定义，获取当前事务或者创建新事物
+				*commit
+				*rollback
+		b. TransactionDefinition 接口
+			- PlatformTransactionManager继承了它
+			- 定义了事务的属性
+				*传播属性：默认是PROPAGATION_REQUIRED（如果当前存在事务，则使用当前事务，否则创建新的事务）
+				*隔离级别：只有在新建事务时才有效
+				*超时时间：只有在新建事务时才有效
+				*事务名称
+				*isReadOnly：是否优化为只读事务，支持这项属性的事务管理器会将事务标记为只读，只读事务不允许有写操作
+		c. TransactionStatus 接口
+			- PlatformTransactionManager继承了它
+			- 定义了事务的状态
+				*hasSavepoint：在嵌套事务场景中，判断当前事务是否包含保存点
+				*setRollbackOnly和isRollbackOnly：只读属性设置（主要用于标记事务，等待回滚）和查询
+				*flush：刷新底层会话中的修改到数据库
+				*isCompleted：判断当前事务是否已完成（已提交或者已回滚）
+
+2.Mybatis
+(1)概述
+MyBatis 可以使用简单的 XML 或注解来配置和映射原生信息，将接口和 Java 的 POJOs(Plain Old Java Objects,普通的 Java对象)映射成数据库中的记录
+ORM：在关系型数据库和对象之间作一个映射，这样，我们在具体的操作数据库的时候，就不需要再去和复杂的SQL语句打交道，只要像平时操作对象一样操作它就可以了
+(2)使用步骤
+①编写mapper.xml或者用注解实现映射
+	- mapper.xml
+		<mapper namespace="org.mybatis.example.BlogMapper">
+		  <select id="selectBlog" resultType="Blog">
+		    select * from Blog where id = #{id}
+		  </select>
+
+		  <insert id="insertAuthor">
+			  insert into Author (id,username,password,email,bio)
+			  values (#{id},#{username},#{password},#{email},#{bio})
+		  </insert>
+
+	      <update id="updateAuthor">
+		    update Author set
+		    username = #{username},
+		    password = #{password},
+		    email = #{email},
+		    bio = #{bio}
+		    where id = #{id}
+		  </update>
+
+		  <delete id="deleteAuthor">
+		    delete from Author where id = #{id}
+		  </delete>
+		</mapper>
+	- 用注解实现映射
+		package org.mybatis.example;
+		public interface BlogMapper {
+		  @Select("SELECT * FROM blog WHERE id = #{id}")
+		  Blog selectBlog(int id);
+		}
+①编写核心配置xml文件
+	<configuration>
+	  <environments default="development">
+	    <environment id="development">
+	      <transactionManager type="JDBC"/>
+	      <dataSource type="POOLED">
+	        <property name="driver" value="${driver}"/>
+	        <property name="url" value="${url}"/>
+	        <property name="username" value="${username}"/>
+	        <property name="password" value="${password}"/>
+	      </dataSource>
+	    </environment>
+	  </environments>
+	  <mappers>
+	    <mapper resource="org/mybatis/example/BlogMapper.xml"/>
+	  </mappers>
+	</configuration>
+②读xml文件，构建 SqlSessionFactory
+	String resource = "org/mybatis/example/mybatis-config.xml";
+	InputStream inputStream = Resources.getResourceAsStream(resource);
+	SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+③执行sql语句
+	try (SqlSession session = sqlSessionFactory.openSession()) {
+	  BlogMapper mapper = session.getMapper(BlogMapper.class);
+	  Blog blog = mapper.selectBlog(101);
+	}
+(3)注意事项
+每个线程都应该有它自己的 SqlSession 实例。SqlSession 的实例不是线程安全的，因此是不能被共享的
+
+3.spring mvc
+(1)mvc
+模型：用于存储数据以及处理用户请求的业务逻辑。
+视图：向控制器提交数据，显示模型中的数据。
+控制器：根据视图提出的请求判断将请求和数据交给哪个模型处理，将处理后的有关结果交给哪个视图更新显示
+(2)spring mvc执行流程（即工作原理）
+    客户端请求提交到 DispatcherServlet。
+    由 DispatcherServlet 控制器寻找一个或多个 HandlerMapping，找到处理请求的 Controller。
+    DispatcherServlet 将请求提交到 Controller。
+    Controller 调用业务逻辑处理后返回 ModelAndView。
+    DispatcherServlet 寻找一个或多个 ViewResolver 视图解析器，找到 ModelAndView 指定的视图。
+    视图负责将结果显示到客户端。
+(3)spring mvc的主要接口
+①DispatcherServlet
+	Spring MVC 所有的请求都经过 DispatcherServlet 来统一分发，在 DispatcherServlet 将请求分发给 Controller 之前需要借助 Spring MVC 提供的 HandlerMapping 定位到具体的 Controller。
+②HandlerMapping
+	负责完成客户请求到 Controller 映射。
+③Controller
+	处理用户请求，一旦 Controller 处理完用户请求，将返回 ModelAndView 对象给 DispatcherServlet 前端控制器，ModelAndView 中包含了模型（Model）和视图（View）。
+
+	从宏观角度考虑，DispatcherServlet 是整个 Web 应用的控制器；从微观考虑，Controller 是单个 Http 请求处理过程中的控制器，而 ModelAndView 是 Http 请求过程中返回的模型（Model）和视图（View）。
+④ViewResolver 接口（视图解析器）
+	在 Web 应用中负责查找 View 对象，从而将相应结果渲染给客户。
+
+4.maven
+(1)作用
+①在pom.xml中导入包，groupId、artifactId、version这三个属性可以唯一表示一个jar包
+②把自己写的项目打包
+(2)优点
+    Maven 统一集中管理好所有的依赖包，不需要程序员再去寻找。
+    对应第三方组件用到的共同 jar，Maven 自动解决重复和冲突问题。
+    Maven 作为一个开放的架构，提供了公共接口，方便同第三方插件集成。程序员可以将自己需要的插件，动态地集成到 Maven，从而扩展新的管理功能。
+    Maven 可以统一每个项目的构建过程，实现不同项目的兼容性管理。
+(3)仓库
+仓库的搜索顺序为：本地仓库、中央仓库、远程仓库
+	本地仓库用来存储项目的依赖库；
+	中央仓库是下载依赖库的默认位置；
+	远程仓库，因为并非所有的依赖库都在中央仓库，或者中央仓库访问速度很慢，远程仓库是中央仓库的补充
+
+5.docker与虚拟机的区别
+与虚拟机相比，Docker隔离性更弱，Docker属于进程之间的隔离，虚拟机可实现系统级别隔离
+Docker更轻量，Docker的架构可以共用一个内核与共享应用程序库，所占内存极小
+
+6.正向代理与反向代理
+https://blog.csdn.net/lixiangss1993/article/details/87934562

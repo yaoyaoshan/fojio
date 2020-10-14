@@ -1,0 +1,251 @@
+八 多线程
+1.创建/使用线程的方法
+(1)实现 Runnable 接口
+先实现接口中的 run() 方法，再使用 Runnable 实例创建一个 Thread 实例，然后调用 Thread 实例的 start() 方法来启动线程
+public class MyRunnable implements Runnable {
+    @Override
+    public void run() {
+        // ...
+    }
+}
+public static void main(String[] args) {
+    MyRunnable instance = new MyRunnable();
+    Thread thread = new Thread(instance);
+    thread.start();
+}
+(2)实现 Callable 接口
+先实现接口中的call方法，再用Callable实例创建FutureTask实例（FutureTask实例中封装了call方法的返回值），再用FutureTask实例创建Thread实例，最后调用Thread实例的start()方法来启动线程
+public class MyCallable implements Callable<Integer> {
+    public Integer call() {
+        return 123;
+    }
+}
+public static void main(String[] args) throws ExecutionException, InterruptedException {
+    MyCallable mc = new MyCallable();
+    FutureTask<Integer> ft = new FutureTask<>(mc);
+    Thread thread = new Thread(ft);
+    thread.start();
+    System.out.println(ft.get());
+}
+(3)继承 Thread 类
+需要重写run方法，因为Thread类实现了Runable接口
+当调用 start() 方法启动一个线程时，虚拟机会将该线程放入就绪队列中等待被调度，当一个线程被调度时会执行该线程的 run() 方法
+public class MyThread extends Thread {
+    public void run() {
+        // ...
+    }
+}
+public static void main(String[] args) {
+    MyThread mt = new MyThread();
+    mt.start();
+}
+
+*最好用Runnable的方式而不是继承Thread：①继承了 Thread 类就无法继承其它类；②继承整个 Thread 类开销过大；③线程池只能放入实现Runabl
+e 或callable 类线程，不能直接放入继承Thread 的类
+
+2.基础线程机制
+(1)使用Executor 框架创建线程池
+作用：管理多个异步任务的执行，而无需程序员显式地管理线程的生命周期
+(2)Daemon 守护线程
+指在程序运行的时候在后台提供一种通用服务的线程，比如垃圾回收线程
+当所有非守护线程结束时，程序也就终止，同时会杀死所有守护线程
+main() 属于非守护线程
+在线程启动之前使用 setDaemon() 方法可以将一个线程设置为守护线程
+public static void main(String[] args) {
+    Thread thread = new Thread(new MyRunnable());
+    thread.setDaemon(true);
+}
+不能把正在运行的常规线程设置为守护线程，否则会抛出异常
+在Daemon 线程中产生的新线程也是Daemon 的
+守护线程应该永远不去访问固有资源，如文件、数据库，因为它会在任何时候甚至在一个操作的中间发生中断
+(3)sleep()
+Thread.sleep(millisec) 方法会休眠当前正在执行的线程，millisec 单位为毫秒
+sleep()可能会抛出InterruptedException，因为异常不能跨线程传播回main()中，因此必须在本地进行处理。线程中抛出的其它异常也同样需要在本地进行处理（这里的处理就是指要写try/catch）
+(4)yield()
+是一个静态方法
+停止当前线程，让同等优先权的线程或更高优先级的线程有执行的机会；如果没有则还是执行它
+Thread.yield() 的调用声明了当前线程已经完成了生命周期中最重要的部分，可以切换给其它线程来执行
+只是对线程调度器的一个建议，而且也只是建议具有相同优先级的其它线程可以运行
+
+3.中断
+一个线程执行完毕之后会自动结束，如果在运行过程中发生异常也会提前结束
+(1)interrupt()
+可以调用interrupt()来中断线程：若线程处于阻塞、限期等待或者无限期等待状态，则该线程会抛出InterruptedException并自杀；若线程处于I/O 阻塞和 synchronized 锁阻塞状态，则interrupt()无效
+(2)interrupted()
+如果一个线程的 run() 方法执行一个无限循环，则不会处于阻塞、限期等待或者无限期等待状态，所以interrupt()无效
+但interrupt()会设置线程的中断标记，此时调用 interrupted() 方法会返回 true
+因此可以利用interrupted()来判断并结束线程：
+private static class MyThread2 extends Thread {
+    @Override
+    public void run() {
+        while (!interrupted()) {
+            // ..
+        }
+        System.out.println("Thread end");
+    }
+}
+(3)Executor 的中断操作
+调用 Executor 的 shutdown() 方法会等待线程都执行完毕之后再关闭
+调用 shutdownNow() 方法，则相当于调用每个线程的 interrupt() 方法
+如果只想中断 Executor 中的一个线程，可以通过使用 submit() 方法来提交一个线程，它会返回一个 Future<?> 对象，通过调用该对象的 cancel(true) 方法就可以中断线程
+(4)通过return 退出run 方法
+(5)使用stop 方法强行终止线程
+
+注意：最靠谱的中断方法就是设置一个全局的标记位，然后再Thread 中去检查这个标记位，发现标记位改变则中断线程
+stop = false // 线程的成员变量
+while(!false) { ... } // 线程的run()内
+
+4.线程之间的协作
+当多个线程可以一起工作去解决某个问题时，如果某些部分必须在其它部分之前完成，那么就需要对线程进行协调
+(1)join
+在线程中调用另一个线程的 join() 方法，会将当前线程挂起，而不是忙等待，直到目标线程结束
+(2)wait() notify() notifyAll()
+调用 wait() 使得线程等待某个条件满足，线程在等待时会被挂起，当其他线程的运行使得这个条件满足时，其它线程会调用 notify() 或者 notifyAll() 来唤醒挂起的线程
+它们都属于 Object 的一部分，而不属于 Thread
+只能用在同步方法或者同步控制块中使用，否则会在运行时抛出 IllegalMonitorStateException
+使用 wait() 挂起期间，线程会释放锁。这是因为，如果没有释放锁，那么其它线程就无法进入对象的同步方法或者同步控制块中，那么就无法执行 notify() 或者 notifyAll() 来唤醒挂起的线程，造成死锁
+(3)await() signal() signalAll()
+可以在 Condition 上调用 await() 方法使线程等待，其它线程调用 signal() 或 signalAll() 方法唤醒等待的线程
+相比于 wait() 这种等待方式，await() 可以指定等待的条件，因此更加灵活
+
+5.一些比较
+(1)wait() 和 sleep() 的区别
+wait() 是 Object 的方法，而 sleep() 是 Thread 的静态方法
+wait() 会释放锁，sleep() 不会
+wait，notify 和notifyAll 只能在同步控制方法或者同步控制块里面使用，而sleep 可以在任何地方使用
+sleep 必须捕获异常，而wait，notify 和notifyAll 不需要捕获异常（sleep 的过程中过程中有可能被其他对象调用它的interrupt(),产生InterruptedException 异常，如果你的程序不捕获这个异常，线程就会异常终止，进入TERMINATED 状态）
+
+6.线程的状态
+一个线程只能处于一种状态，并且这里的线程状态特指 Java 虚拟机的线程状态，不能反映线程在特定操作系统下的状态
+总图见pdf P90
+注意：挂起通常指的是通过wait()进入（无）限期等待状态；就绪就是可运行
+(1)初始状态 NEW
+创建后尚未启动
+(2)可运行 RUNABLE
+其他线程调用了该对象的start()方法后
+说法一：正在 Java 虚拟机中运行。但是在操作系统层面，它可能处于运行状态，也可能等待资源调度（例如处理器资源），资源调度完成就进入运行状态。所以该状态的可运行是指可以被运行，具体有没有运行要看底层操作系统的资源调度
+说法二：没有在运行，该状态的线程位于可运行线程池中，变得可运行，等待获取CPU 的使用权
+(3)阻塞 BLOCKED
+线程放弃CPU 使用权，暂时停止运行，直到线程进入就绪状态，才有机会转到运行状态
+运行的线程在获取对象的同步锁时，若该同步锁被别的线程占用，则JVM 会把该线程放入锁池中，直到锁被释放。
+(4)无限期等待 WAITING：运行的线程执行未设置timeout参数的wait()方法，JVM 会把该线程放入等待池中，直到被其它线程显式地唤醒；运行的线程执行未设置timeout参数的join()方法，进入等待池，直到等待线程结束
+(5)限期等待 TIMED_WAITING：运行的线程执行sleep()，或设置了timeout的wait()和join()方法，或者发出了I/O 请求时，JVM会把该线程置为限期等待状态，当sleep()状态超时、join()等待线程终止或者超时、或者I/O 处理完毕时，线程重新转入就绪状态
+(6)死亡 TERMINATED：线程结束任务之后自己结束，或者产生了异常而结束
+(7)运行 RUNNING：就绪状态的线程获取了CPU，执行程序代码
+
+7.多线程如何避免死锁
+(1)规定加锁顺序（当多个线程需要相同的一些锁，确保所有的线程都是按照相同的顺序获得锁）
+但这种方式需要你事先知道所有可能会用到的锁并对锁进行排序
+(2)规定加锁时限（线程尝试获取锁的时候加上一定的时限，超过时限则放弃对该锁的请求，若一个线程没有在给定的时限内成功获得所有需要的锁，则会进行回退并释放所有已经获得的锁，然后等待一段随机的时间再重试）
+(3)死锁检测
+每当一个线程获得了锁，会在线程和锁相关的数据结构中（map、graph等等）将其记下。除此之外，每当有线程请求锁，也需要记录在这个数据结构中
+当一个线程请求锁失败时，这个线程可以遍历锁的关系图看看是否有死锁发生
+若发生了死锁，则选一种方法解锁：①释放所有锁，回退，并且等待一段随机的时间后重试；②给这些线程设置优先级，让一个（或几个）线程回退，剩下的线程就像没发生死锁一样继续保持着它们需要的锁
+
+8.线程通信方式
+(1)多个线程通过synchronized 关键字这种方式来实现线程间的通信
+(2)wait/notify 机制
+
+9.线程池
+事先创建若干个可执行的线程放入池中，需要时从池中自取，而不用自己创建线程，使用完毕不是销毁而是放回池中
+作用：减少创建和销毁线程的开销
+(1)七大参数
+①corePoolSize 线程池核心线程大小：最小的线程数量，即使这些线程处于空闲状态，他们也不会被销毁
+②maximumPoolSize 线程池最大线程数量：见(4)
+③keepAliveTime 空闲线程存活时间：一个线程如果处于空闲状态，并且当前的线程数量大于corePoolSize，那么在指定时间后，这个空闲线程会被销毁
+④unit 空间线程存活时间单位：keepAliveTime的计量单位
+⑤workQueue 工作队列（即任务队列）
+⑥threadFactory 创建线程的线程工厂
+⑦handler 达到线程上限或者队列容量上限时执行的拒绝策略
+a. ArrayBlockingQueue
+基于数组的有界阻塞队列，按FIFO排序
+b. LinkedBlockingQuene
+基于链表的无界阻塞队列（其实最大容量为Interger.MAX），按照FIFO排序
+队列不会装不下，所以maximunPoolSize不起作用
+c. SynchronousQuene
+不缓存任务的阻塞队列，相当于队列的大小为0，新任务来时直接创建线程，若线程数大于maximunPoolSize，则根据策略抛弃task
+d. PriorityBlockingQueue
+具有优先级的无界阻塞队列，优先级通过参数Comparator实现
+(2)四大拒绝策略
+①AbortPolicy（默认拒绝策略）：直接丢弃任务并抛出RejectedExecutionException异常
+②DiscardPolicy：丢弃任务，但是不抛出异常
+③DiscardOldestPolicy：丢弃队列最前面的任务，然后重新提交被拒绝的任务
+④CallerRunsPolicy：由调用线程（提交任务的线程）处理该任务
+(3)基本组成部分
+线程管理器 ThreadPool：创建并管理线程池；创建线程；销毁线程池；添加新任务
+工作线程 PoolWorker：线程池中的线程
+任务接口 Task：每个任务必须实现的接口，主要规定了任务入口、任务完成后的收尾工作、任务的执行状态等
+任务队列 TaskQueue：存放没有处理的任务，是一种缓冲机制
+(4)工作过程
+当线程数小于corePoolSize时，直接创建线程执行task，否则把task放入队列；若队列装不下了，再次创建线程，若线程数大于maximunPoolSize，则根据策略抛弃task
+(5)分类
+①newCachedThreadPool：线程池中数量没有固定，可达到最大值（Interger. MAX_VALUE）；线程可进行缓存重复利用和回收（回收默认时间为1分钟） ；没有可用线程，会重新创建一个线程
+②newFixedThreadPool：线程池中线程数固定；线程可以重复被使用，在显式关闭之前，都将一直存在；超出一定量的线程被提交时候需在队列中等待
+③newSingleThreadExecutor：线程池中最多执行1个线程，之后提交的线程活动将会排在队列中以此执行
+④newScheduleThreadPool：线程池中具有指定数量的线程，即便是空线程也将保留；可定时或者延迟执行线程活动
+⑤newSingleThreadScheduledExecutor：线程池中最多执行1个线程，之后提交的线程活动将会排在队列中以此执行；可定时或者延迟执行线程活动
+
+10.JUC
+(1)Atomic
+(2)Locks
+(3)Collections
+①List和Set：CopyOnWriteArrayList、CopyOnWriteArraySet、ConcurrentSkipListSet
+②Map：ConcurrentHashMap、ConcurrentSkipListMap
+③Queue：ArrayBlockingQueue, LinkedBlockingQueue, LinkedBlockingDeque, ConcurrentLinkedQueue, ConcurrentLinkedDeque
+(4)Executer
+(5)Tools
+①CountDownLatch
+维护了一个计数器 cnt，每次调用countDownLatch.countDown() 方法会让计数器的值减 1，减到 0 的时候，那些因为调用countDownLatch.await() 方法而在等待的线程就会被唤醒
+计数无法被重置，如果需要重置计数，请考虑使用CyclicBarrier
+②CyclicBarrier
+让多个线程在这个屏障前等到，直到所有线程都到达了这个屏障时，再一起执行后面的操作。假如每个线程各有一个await，任何一个线程运行到await 方法时就阻塞，直到最后一个线程运行到await 时才同时返回
+③Semaphore
+该类用于控制信号量的个数，构造时传入个数。总数就是控制并发的数量。假如是5，程序执行前用acquire()方法获得信号，则可用信号变为4，程序执行完通过release()方法归还信号量，可用信号又变为5.如果可用信号为0，acquire 就会造成阻塞，等待release 释放信号
+④Exchanger
+只能用于两个线程。当一个线程运行到exchange()方法时会阻塞，另一个线程运行到exchange()时，二者交换数据，然后执行后面的程序
+
+11.如何实现线程安全
+(1)不可变
+不可变对象一定是线程安全的，不需要再采取任何的线程安全保障措施。只要一个不可变的对象被正确地构建出来，永远也不会看到它在多个线程之中处于不一致的状态
+不可变对象包括：final 关键字修饰的基本数据类型、String、枚举类型、Number 部分子类，如 Long 和 Double 等数值包装类型，BigInteger 和 BigDecimal 等大数据类型。但同为 Number 的原子类 AtomicInteger 和 AtomicLong 则是可变的
+对于集合类型，可以使用 Collections.unmodifiableXXX() 方法来获取一个不可变的集合，它先对原始的集合进行拷贝，需要对集合进行修改的方法都直接抛出异常
+(2)互斥同步（即阻塞同步，悲观）
+synchronized 和 ReentrantLock
+(3)非阻塞同步（乐观）
+①CAS
+②AtomicInteger：调用了 Unsafe 类的 CAS 操作
+(4)无同步方案：不共享数据
+①栈封闭：多个线程访问同一个方法的局部变量时，不会出现线程安全问题，因为局部变量存储在虚拟机栈中，属于线程私有的
+②线程本地存储：可以把共享数据的可见范围限制在同一个线程之内；用ThreadLocal 类实现
+每个 Thread 都有一个 ThreadLocal.ThreadLocalMap 对象，当调用一个 ThreadLocal 的 set(T value) 方法时，先得到当前线程的 ThreadLocalMap 对象，然后将 ThreadLocal->value 键值对插入到该 Map 中
+③可重入代码：可以在代码执行的任何时刻中断它，转而去执行另外一段代码（包括递归调用它本身），而在控制权返回后，原来的程序不会出现任何错误
+
+12.死锁产生的条件：只要下述条件之一不满足，就不会发生死锁
+(1)互斥条件：任意时刻一个资源只能给一个进程使用
+(2)不可剥夺条件：进程所获得的资源在未使用完毕之前，不被其他进程强行剥夺
+(3)请求和保持条件：进程每次申请它所需要的一部分资源，在申请新的资源的同时，继续占用已分配到的资源
+(4)循环等待条件
+在发生死锁时必然存在一个进程等待队列{P1,P2,…,Pn},其中P1等待P2占有的资源，P2等待P3占有的资源，…，Pn等待P1占有的资源，形成一个进程等待环路
+
+13.juc中的其他组件
+(1)FutureTask 
+FutureTask 实现了 RunnableFuture 接口，该接口继承自 Runnable 和 Future 接口，这使得 FutureTask 既可以当做一个任务执行，也可以有返回值
+FutureTask 可用于异步获取执行结果或取消执行任务的场景。当一个计算任务需要执行很长时间，那么就可以用 FutureTask 来封装这个任务，主线程在完成自己的任务之后再去获取结果。
+(2)BlockingQueue
+    FIFO 队列 ：LinkedBlockingQueue、ArrayBlockingQueue（固定长度）
+    优先级队列 ：PriorityBlockingQueue
+提供了阻塞的 take() 和 put() 方法：如果队列为空 take() 将阻塞，直到队列中有内容；如果队列为满 put() 将阻塞，直到队列有空闲位置。
+
+14.协程
+- 正如一个进程可以拥有多个线程一样，一个线程也可以拥有多个协程
+- 协程不是被操作系统内核所管理，而完全是由程序所控制（也就是在用户态执行）
+- 协程共享堆，不共享栈
+- 优势1：开销小。当协程执行到yield关键字时，会暂停在那一行，等到主线程调用send方法发送了数据，协程才会接到数据继续执行。但是，yield让协程暂停，和线程的阻塞是有本质区别的。协程的暂停完全由程序控制，线程的阻塞状态是由操作系统内核来进行切换。因此，协程的开销远远小于线程的开销【传统的生产者-消费者模型是一个线程写消息，一个线程取消息，通过锁机制控制队列和等待，但一不小心就可能死锁。如果改用协程，生产者生产消息后，直接通过yield跳转到消费者开始执行，待消费者执行完毕后，切换回生产者继续生产，效率极高】
+- 优势2：不需要多线程的锁机制，因为只有一个线程，也不存在同时写变量冲突，在协程中控制共享资源不加锁，只需要判断状态就好了，所以执行效率比多线程高很多
+
+15.go实现的并发模型
+(1)多线程并发：cpp中也有，以共享内存的方式来通信
+(2)csp：以通信的方式来共享内存
+- 通过goroutine和channel实现，channel是goroutine之间通信的管道
+- 传数据用channel<-data，取数据用<-data，它俩成对出现；传和取都是阻塞的，直到另外goroutine取/传为止
+- main()本身就是一个goroutine

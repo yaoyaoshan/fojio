@@ -1,0 +1,252 @@
+六 集合类
+0.容器中的元素
+如果是基本类型，容器中存放的是值
+如果是对象，容器中存放的是引用（地址）
+
+1.Collection
+(1)Set：无重复元素
+①TreeSet：有序
+基于TreeMap实现
+查找复杂度：O(logN)
+②HashSet：无序
+基于hashmap实现
+查找复杂度：O(1)
+允许使用null元素
+add：有重复元素时返回false；添加的元素是存放在HashMap的key位置上，而value取了默认常量PRESENT，是一个空对象
+如何保证无重复元素：当key 值(该元素e)相同时，只是进行更新value，并不会新增加，所以set 中的元素不会进行改变
+③LinkedHashSet：保留插入顺序
+基于双向链表实现
+查找复杂度：O(1)
+(2)List
+①ArrayList：动态数组
+基于动态数组实现
+支持随机访问
+允许null值
+数组的默认大小为 10
+扩容操作（*1.5倍）调用 Arrays.copyOf() 把原数组整个复制到新数组中，因此最好在创建 ArrayList 对象时就指定大概的容量
+删除元素：把其后的元素都向前挪，代价很高
+ArrayList 实现了 writeObject() 和 readObject() 来控制只序列化数组中有元素填充那部分内容
+modCount 用来记录 ArrayList 结构发生变化的次数，结构发生变化是指添加或者删除至少一个元素的所有操作，或者是调整内部数组的大小
+在进行序列化或者迭代等操作时，需要比较操作前后 modCount 是否改变，如果改变了需要抛出 ConcurrentModificationException
+②Vector：线程安全
+允许null值
+和ArrayList类似，但add和get都使用了synchronized进行同步
+Vector 的构造函数可以传入 capacityIncrement 参数，它的作用是在扩容时使容量 capacity 增长 capacityIncrement；如果这个参数的值小于等于 0或未传参，扩容时每次都令 capacity 为原来的两倍
+Vector 是同步的，因此开销就比 ArrayList 要大，访问速度更慢
+最好使用 ArrayList 而不是 Vector，因为同步操作完全可以由程序员自己来控制
+vector的替代品：
+List<String> list = new ArrayList<>();
+List<String> synList = Collections.synchronizedList(list);
+或
+List<String> list = new CopyOnWriteArrayList<>();
+*Stack继承自Vector
+③LinkedList：双向链表
+基于双向链表实现
+只能顺序访问
+每个链表存储了 first 和 last 指针
+每个node有prev和next
+④CopyOnWriteArrayList
+写操作在一个复制的数组上进行，读操作还是在原始数组中进行，读写分离
+写操作结束之后需要把原始数组指向新的复制数组
+很适合读多写少的应用场景
+(3)Queue
+①LinkedList
+可用来实现双向队列
+②PriorityQueue
+基于堆结构实现，底层是变长数组
+
+2.Map
+(1)TreeMap：有序
+基于红黑树实现
+可以插入null键，null值
+(2)HashMap：无序
+①实现
+基于哈希表实现
+数组中的每个位置被当成一个桶，一个桶存放一个链表
+put时通过hashcode来确定桶下标再通过equals来确定key是否存在，get时通过hashcode找到桶后再通过equals来确定key是否存在
+HashMap 使用拉链法来解决冲突，同一个链表中存放哈希值和散列桶取模运算结果相同的 Entry
+拉链法的工作原理：新建一个 HashMap，默认大小为 16；插入 <K1,V1> 键值对，先计算 K1 的 hashCode 为 115，使用除留余数法得到所在的桶下标 115%16=3；插入 <K2,V2> 键值对，先计算 K2 的 hashCode 为 118，使用除留余数法得到所在的桶下标 118%16=6；插入 <K3,V3> 键值对，先计算 K3 的 hashCode 为 118，使用除留余数法得到所在的桶下标 118%16=6，插在 <K2,V2> 前面
+HashEntry中除了value其他都是final
+②查找
+拉链法怎么查找：先计算在哪个桶，再顺序查找
+③插入put
+先找出是否已经存在键为 key 的键值对，如果存在的话就更新这个键值对的值为 value，并返回old value
+HashMap允许插入键为null的键值对。但是因为无法调用null的hashCode()方法，也就无法确定该键值对的桶下标，只能通过强制指定一个桶下标来存放
+HashMap 使用第 0 个桶存放键为 null 的键值对
+头插法（因为next是final）
+④如何确定桶
+先得到key的hashcode
+再重新计算该key的hashcode，让1分布得更均匀
+用新hashcode模map的大小得到桶的下标，注意：当x是2的幂时，y % x = y & (x - 1)，所以通常map的大小会设置成2的幂，然后用位运算代替模运算
+⑤如何扩容
+size指键值对数量，capacity指数组大小，loadFactor装载因子指数组最多有多少比例装了键值对
+当size>=capacity*loadFactor时，令 capacity 为原来的两倍
+扩容操作需要把 oldTable 的所有键值对重新计算桶下标并重新插入 newTable 中（java8进行了优化：因为我们的length总是2的n次幂，所以在一次resize之后，当前位置的记录要么保持当前位置不变，要么就向前移动length就可以了。所以java8中的HashMap的resize不需要重新计算hashCode）
+HashMap 构造函数允许用户传入的容量不是 2 的 n 次方，因为它可以自动地将传入的容量转换为 2 的 n 次方
+java1.8：一个桶存储的链表长度大于等于 8 时会将链表转换为红黑树
+⑥Hashmap 为什么线程不安全
+a. put操作导致：比如有两个线程A和B，首先A希望插入一个key-value对到HashMap中，首先计算记录所要落到的桶的索引坐标，然后获取到该桶里面的链表头结点，此时线程A的时间片用完了，而此时线程B被调度得以执行，和线程A一样执行，只不过线程B成功将记录插到了桶里面，假设线程A插入的记录计算出来的桶索引和线程B要插入的记录计算出来的桶索引是一样的，那么当线程B成功插入之后，线程A再次被调度运行时，它依然持有过期的链表头但是它对此一无所知，以至于它认为它应该这样做，如此一来就覆盖了线程B插入的记录
+b. resize操作导致死循环：https://www.jianshu.com/p/e2f75c8cce01 最后一段
+⑦删除操作
+e1-> e2 -> e3 -> e4 我们要删除e3 这个entry，因为HashEntry 中next 的不可变，所以我们无法直接把e2 的next 指向e4，而是依次复制e1、e2，形成新的链表e2->e1->e4
+⑧其他解决哈希冲突的方法
+a. 开放定址法：线性探测（依次往后找）、平方探测（左右横跳）、伪随机探测（根据随机数列跳）
+b. 再哈希法：用另一个哈希函数哈希一次
+c. 公共溢出区法：把冲突的都放到公共溢出区中
+(3)HashTable：线程安全
+和HashMap类似，但使用 synchronized 来进行同步，全局只有一把锁
+它是遗留类，不应该去使用它，而是使用 ConcurrentHashMap 来支持线程安全
+ConcurrentHashMap 的效率会更高，因为 ConcurrentHashMap 引入了分段锁
+不能插入键为 null 的 Entry
+扩容增量：2*原数组长度+1
+(4-1)java1.7的ConcurrentHashMap
+①实现
+和HashMap类似，但实现了分段锁
+ConcurrentHashMap 维护一个Segment 数组，一个Segment 维护一个HashEntry 数组
+每个锁管理一段桶，多个线程可以同时访问不同分段锁上的桶，从而使其并发度更高（并发度就是 Segment 的个数）
+默认的并发级别为 16，也就是说默认创建 16 个 Segment
+在链表过长时会转换为红黑树
+HashEntry中除了value其他都是final
+②size操作
+每个segment有一个count计数，在执行 size 操作时，需要遍历所有 Segment 然后把 count 累计起来
+ConcurrentHashMap 在执行 size 操作时先尝试不加锁，如果连续两次不加锁操作得到的结果一致，那么可以认为这个结果是正确的
+如果尝试的次数超过 3 次，就需要对每个 Segment 加锁
+③get操作：不会加锁，得到的value是Null时才会加锁再获取一次
+先判断segment的count是否为0，count是volatile（对volatile域的写入操作happens-before<如果说操作 A 先行发生于操作 B，那么操作 A 产生的影响一定应该被操作 B 所观察到>于每一个后续对同一个域的读写操作），所以即使有另一个线程改变了count，读到的也是最新的count
+若get时另一个线程在插入新entry且没完全构造好，则读到的value会是null，重新加锁读值即可
+若get时另一个线程修改了value：value是volatile，所以读到的会是最新的
+若get时另一个线程删除了entry：可能会读到被删除的entry
+④put操作：会对segment加锁
+⑤remove操作：会对segment加锁
+(4-2)java1.8的ConcurrentHashMap
+①实现
+抛弃了原有的Segment 分段锁，而采用了CAS + synchronized 来保证并发安全性
+一个桶存储的链表长度大于等于 8 时会将链表转换为红黑树
+②put
+若key不存在，用CAS机制插入新的entry
+若key存在，用syncronized更新旧value
+(5)LinkedHashMap
+①实现
+继承自 HashMap，查找效率和它一样
+使用双向链表来维护元素的顺序，顺序为插入顺序或者最近最少使用（LRU）顺序
+accessOrder 决定了顺序，默认为 false，此时维护的是插入顺序
+②如何维护顺序
+afterNodeAccess()：指定为 LRU 顺序之后，在每次访问一个节点时，会将这个节点移到链表尾部，所以链表首部就是最近最久未使用的节点
+afterNodeInsertion()：当 removeEldestEntry() 方法返回 true 时会移除最晚的节点，也就是链表首部节点 first
+removeEldestEntry()：默认为 false，如果需要让它为 true，需要继承 LinkedHashMap 并且覆盖这个方法的实现，这在实现 LRU 的缓存中特别有用，通过移除最近最久未使用的节点，从而保证缓存空间足够，并且缓存的数据都是热点数据
+(6)WeakHashMap
+存储弱引用关联的对象
+被 WeakReference 关联的对象在下一次垃圾回收时会被回收
+WeakHashMap 主要用来实现缓存，通过使用 WeakHashMap 来引用缓存对象，由 JVM 对这部分缓存进行回收
+
+3-1.fail-fast机制
+在迭代过程中，如果有线程对集合结构做出改变（进行add，remove，clear等涉及到修改集合中的元素个数的操作导致modCount != expectedModCount），就会发生fail-fast，抛出异常
+每当迭代器使用hashNext()/next()遍历下一个元素之前，都会检测modCount 变量是否为expectedmodCount 值
+java.util 包下的集合类都是快速失败的
+解决方法：
+①在单线程的遍历过程中，如果要进行remove操作，可以调用迭代器的remove方法而不是集合类的remove方法
+②使用java并发包(java.util.concurrent)中的类来代替ArrayList 和hashMap
+使用 CopyOnWriterArrayList代替ArrayList，CopyOnWriterArrayList在是使用上跟ArrayList几乎一样，CopyOnWriter是写时复制的容器(COW)，在读写时是线程安全的。该容器在对add和remove等操作时，并不是在原数组上进行修改，而是将原数组拷贝一份，在新数组上进行修改，待完成后，才将指向旧数组的引用指向新数组，所以对于CopyOnWriterArrayList在迭代过程并不会发生fail-fast现象。但 CopyOnWrite容器只能保证数据的最终一致性，不能保证数据的实时一致性
+对于HashMap，可以使用ConcurrentHashMap，ConcurrentHashMap采用了锁机制，是线程安全的。在迭代方面，ConcurrentHashMap使用了一种不同的迭代方式。在这种迭代方式中，当iterator被创建后集合再发生改变就不再是抛出ConcurrentModificationException，取而代之的是在改变时new新的数据从而不影响原有的数据 ，iterator完成后再将头指针替换为新的数据 ，这样iterator线程可以使用原来老的数据，而写线程也可以并发的完成改变。即迭代不会发生fail-fast，但不保证获取的是最新的数据
+
+3-2.fail-safe机制
+采用安全失败机制的集合容器，在遍历时不是直接在集合内容上访问的，而是先复制原有集合内容，在拷贝的集合上进行遍历
+java.util.concurrent 包下的容器都是安全失败，可以在多线程下并发使用，并发修改
+优点：在遍历过程中对原集合所作的修改并不能被迭代器检测到，所以不会触发Concurrent Modification Exception
+缺点：迭代器并不能访问到修改后的内容，在遍历期间原集合发生的修改迭代器是不知道的
+
+4.各种比较
+(1)hashtable 和hashmap 的区别
+hashtable是同步的，hashmap没有同步
+hashtable不允许null（key value都不能是null），hashmap允许null（key value都可以是null）
+hashtable直接使用hashcode，hashmap会重新计算hashcode且用位运算代替取模
+hashtable默认大小11，扩容是2*size+1；hashmap默认大小16，扩容*2
+hashtable基于Dictionary类，hashmap基于AbstractMap类
+(2)HashMap 和ConCurrentHashMap 区别
+hashmap非线程安全，concurrenthashmap通过线段锁实现了线程安全
+(3)ConcurrentHashMap 和HashTable 区别
+ConcurrentHashMap仅仅锁定map的某个部分（分段锁），而Hashtable则会锁定整个map（synchronized，效率低）
+(4)Linkedhashmap 与hashmap 的区别
+linkedhashmap是hashmap的子类
+LinkedHashMap 中的Entry 增加了两个指针before 和after，用于维护双向链表
+LinkedHashMap 对其中的重哈希过程(transfer 方法)进行了重写
+(5)hashmap 与hashset 区别
+hashmap比hashset更快一些
+(6)拉链法与开放定址法的比较
+①拉链法的优点
+链地址法处理冲突简单，且无堆积现象，即非同义词决不会发生冲突，因此平均查找长度较短
+由于链地址法中各链表上的结点空间是动态申请的，故它更适合于造表前无法确定表长的情况
+开放定址法为减少冲突，要求装填因子α较小，故当结点规模较大时会浪费很多空间。而链地址法中可取α≥1，且结点较大时，链地址法中增加的指针域可忽略不计，因此节省空间
+用链地址法构造的散列表中，删除结点的操作易于实现；用开放地址法处理冲突的散列表上执行删除操作，只能在被删结点上做删除标记，而不能真正删除结点，否则将截断在它之后填入散列表的同义词结点的查找路径（因为空地址单元(即开放地址)是查找失败的条件）
+②开放定址法的优点
+指针需要额外的空间，故当结点规模较小时，开放定址法较为节省空间
+(7)Iterator 和ListIterator 的区别
+ListIterator 实现了Iterator 接口，并包含其他的功能，比如：增加元素，替换元素，获取前一个和后一个元素的索引等
+Iterator 可用来遍历Set 和List 集合，但是ListIterator 只能用来遍历List
+Iterator 对集合只能是前向遍历，ListIterator 既可以前向也可以后向
+(8)快速失败(fail-fast)和安全失败(fail-safe)的区别
+Iterator 的安全失败是基于对底层集合做拷贝，因此，它不受源集合上修改的影响
+java.util 包下面的所有的集合类都是快速失败的， 而java.util.concurrent 包下面的所有的类都是安全失败的
+快速失败的迭代器会抛出ConcurrentModificationException 异常，而安全失败的迭代器永远不会抛出这样的异常
+(9)Enumeration 接口和Iterator 接口的区别
+Iterator 支持 fail-fast 机制，而 Enumeration 不支持 
+Enumeration 只有2个函数接口。 通过Enumeration，我们只能读取集合的数据，而不能对数据进行修改。
+Iterator 有3个函数接口。 Iterator除了能读取集合的数据之外，也能数据进行删除操作。
+Enumeration 速度是Iterator 的2 倍，同时占用更少的内存
+Enumeration 是JDK 1.0添加的接口。使用到它的函数包括Vector、Hashtable等类
+Iterator 是JDK 1.2添加的接口，为HashMap、ArrayList等集合提供遍历接口
+(10)ArrayList 与LinkedList 区别
+数组 vs 链表
+LinkedList 比ArrayList 更占内存，因为LinkedList 为每一个节点存储了两个引用，一个指向前一个元素，一个指向下一个元素
+(11)数组(Array)和列表(ArrayList)区别
+Array 可以包含基本类型和对象类型，ArrayList 只能包含对象类型
+Array 大小固定，ArrayList 的大小是动态变化的
+ArrayList 提供更多的方法和特性，如：addAll()，removeAll()，iterator()等
+使用基本数据类型或者知道数据元素数量的时候可以考虑Array;ArrayList 处理固定数量的基本类型数据类型时会自动装箱来减少编码工作量，但是相对较慢
+(12)ArrayList 和Vector 区别
+Vector 是同步，线程安全，而ArrayList 非同步，线程不安全。对于ArrayList，如果迭代时改变列表，应该使用CopyOnWriteArrayList
+Vector 是同步的，因此开销就比 ArrayList 要大，访问速度更慢
+
+5.Collections.sort
+(1)概述
+Collections是一个工具类，sort是其中的静态方法，是用来对List类型进行排序的
+(2)形参格式
+①public static <T extends Comparable<? super T>> void sort(List<T> list) list.sort(null);
+②public static <T> void sort(List<T> list, Comparator<? super T> c) list.sort(c);
+(3)用法
+①普通：Collections.sort(intList); // 前提是list中元素是基础类型或其封装
+②逆序：Collections.sort(empList,comparator.reversed()); 
+③重写Comparable接口的compareTo
+public class Emp implements Comparable<Emp>{
+	@Override
+    public int compareTo(Emp emp) { ... }
+}
+Emp empList = new Emp();
+Collections.sort(empList);
+④重写comparator接口的compare
+Collections.sort(intList,new Comparator<Integer>() {
+    @Override
+    public int compare(Integer o1, Integer o2) {
+        return o2-o1;
+    }
+});
+(4)内部原理
+调用的是Arrays.sort()
+Arrays类有两个sort方法，一个是sort(object)，一个是sort(int)，前者用的是归并排序，后者是快排
+优化：短数组中使用插入排序
+
+12.PriorityQueue
+(1)实现：数组表示的小顶堆（节点的值总是不大于其孩子节点的值；完全二叉树）
+(2)添加元素：offer()和add()
+算法：添加元素位于末尾，同时队列长度加1，然后这个元素与它的父节点进行比较，如果比父节点小那么就与父节点进行交换，然后再与交换后的位置的父节点进行比较，重复这个过程，直到该元素的值大于父节点
+add：在插入失败时抛出异常
+offer：在插入失败时返回false
+O(logN)
+(3)获得但不删除堆顶元素：element()和peek()
+算法：直接返回数组0下标处的那个元素
+element：失败时抛出异常
+peek：失败时返回null
+(4)获取并删除队首元素：remove()和poll()
+算法：把队尾元素挪到队首，将其逐层向下与当前点的左右孩子中较小的那个交换，直到它小于或等于左右孩子中的任何一个为止
+remove：失败时抛出异常
+poll：失败时返回null
